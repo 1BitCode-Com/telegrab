@@ -9,7 +9,7 @@
 
 *A powerful Python script for downloading media files from Telegram groups and channels with advanced features like resume capability, concurrent downloads, and intelligent rate limiting.*
 
-![Logo](assets/logo.svg)
+![Logo](assets/logo.png)
 
 [![Get Started](https://img.shields.io/badge/Get%20Started-Quick%20Start-blue?style=for-the-badge&logo=github)](QUICK_START.md)
 [![Documentation](https://img.shields.io/badge/Documentation-README-blue?style=for-the-badge&logo=markdown)](README.md)
