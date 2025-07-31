@@ -6,7 +6,6 @@
 ![Python](https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange?style=for-the-badge)
-![Downloads](https://img.shields.io/badge/Downloads-1000+-brightgreen?style=for-the-badge)
 
 *A powerful Python script for downloading media files from Telegram groups and channels with advanced features like resume capability, concurrent downloads, and intelligent rate limiting.*
 
