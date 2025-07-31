@@ -9,7 +9,10 @@
 
 *A powerful Python script for downloading media files from Telegram groups and channels with advanced features like resume capability, concurrent downloads, and intelligent rate limiting.*
 
-![Logo](assets/logo.png)
+<p align="center">
+   
+  <img src="assets/logo.png" alt="Project Logo" width="120"/>
+</p>
 
 [![Get Started](https://img.shields.io/badge/Get%20Started-Quick%20Start-blue?style=for-the-badge&logo=github)](QUICK_START.md)
 [![Documentation](https://img.shields.io/badge/Documentation-README-blue?style=for-the-badge&logo=markdown)](README.md)
@@ -271,7 +274,6 @@ See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes.
 
 **Made with ❤️ by [1BitCode-Com](https://github.com/1BitCode-Com)**
 
-[![GitHub](https://img.shields.io/badge/GitHub-1BitCode--Com-black?style=for-the-badge&logo=github)](https://github.com/1BitCode-Com)
-[![Telegram](https://img.shields.io/badge/Telegram-Contact-blue?style=for-the-badge&logo=telegram)](https://t.me/1BitCode)
+<img src="assets/banner.png" alt="Project Banner" width="800"/>
 
 </div> 
