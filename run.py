@@ -192,10 +192,21 @@ def setup_config():
         except ValueError:
             max_file_size = 10
     
+    # Get target group/channel
+    print("\nTARGET GROUP/CHANNEL SETUP")
+    print("Enter the Telegram group or channel you want to download from:")
+    print("Examples:")
+    print("- https://t.me/example_channel")
+    print("- @example_channel")
+    print("- example_channel")
+    
+    target_group = get_user_input("Enter target group/channel (optional - can be set later)", "")
+    
     config = {
         "api_id": api_id,
         "api_hash": api_hash,
         "session_name": "telegram_downloader",
+        "target_group": target_group,
         "download_dir": download_dir,
         "state_file": "download_state.json",
         "log_file": "logs/downloader.log",
@@ -270,16 +281,27 @@ def get_download_settings():
     print("\nDOWNLOAD SETTINGS")
     print("-" * 20)
     
+    # Load config to check for target_group
+    config = load_config()
+    current_dir = config.get("download_dir", "downloads")
+    target_group = config.get("target_group", "")
+    
     # Get target
-    target = input("Enter target group/channel link or username: ").strip()
+    if target_group:
+        print(f"Target group from config: {target_group}")
+        use_config_target = input("Use this target? (y/n): ").lower().strip()
+        if use_config_target == 'y':
+            target = target_group
+        else:
+            target = input("Enter new target group/channel link or username: ").strip()
+    else:
+        target = input("Enter target group/channel link or username: ").strip()
+    
     if not target:
         print("Error: Target is required!")
         return None
     
     # Get download directory
-    config = load_config()
-    current_dir = config.get("download_dir", "downloads")
-    
     print(f"\nCurrent download directory: {current_dir}")
     change_dir = input("Change download directory? (y/n): ").lower().strip()
     
