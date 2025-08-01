@@ -1,18 +1,12 @@
-# Telegram Media Downloader
-
 <div align="center">
+
+<img src="assets/logo.png" alt="Project Logo" width="200"/>
+
 
 ![Telegram Media Downloader](https://img.shields.io/badge/Telegram-Media%20Downloader-blue?style=for-the-badge&logo=telegram)
 ![Python](https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-1.0.0-orange?style=for-the-badge)
-
-*A powerful Python script for downloading media files from Telegram groups and channels with advanced features like resume capability, concurrent downloads, and intelligent rate limiting.*
-
-<p align="center">
-   
-  <img src="assets/logo.png" alt="Project Logo" width="120"/>
-</p>
 
 [![Get Started](https://img.shields.io/badge/Get%20Started-Quick%20Start-blue?style=for-the-badge&logo=github)](QUICK_START.md)
 [![Documentation](https://img.shields.io/badge/Documentation-README-blue?style=for-the-badge&logo=markdown)](README.md)
@@ -22,25 +16,37 @@
 
 ---
 
+# Telegram Media Downloader
+
+A powerful and efficient Python script for downloading media files from Telegram groups and channels with advanced features and human-like behavior.
+
 ## Features
 
-- Download media from public and private Telegram groups/channels
-- Resume downloads from where you left off
-- Support for 25,000+ files with intelligent batching
-- Concurrent downloads with configurable limits
-- Date-based file organization
-- Progress tracking and detailed logging
-- Rate limiting protection to avoid Telegram bans
-- File type and size filtering
-- Memory usage monitoring
-- Automatic cleanup and state management
+### Core Features
+- **Media Download**: Download photos, videos, documents, and audio files
+- **Resume Support**: Automatically resume downloads from where you left off
+- **Date Organization**: Files are organized by date (YYYY-MM format)
+- **Human-like Behavior**: Random delays and natural download patterns
+- **Account Type Support**: Optimized settings for both free and premium accounts
+- **Target Configuration**: Set default group/channel in config file
+
+### Advanced Features
+- **Concurrent Downloads**: Download multiple files simultaneously
+- **Date Filtering**: Filter downloads by specific date ranges
+- **Password Protection**: Support for password-protected channels
+- **CSV Export**: Export download reports to CSV format
+- **State Encryption**: Secure state file encryption
+- **Memory Monitoring**: Real-time memory usage tracking
+- **Automatic Cleanup**: Remove temporary and old files
+- **File Size Limits**: Configurable file size restrictions
+- **Extension Filtering**: Download only specific file types
 
 ## Quick Start
 
 ### Prerequisites
-
-- Python 3.7 or higher
-- Telegram API credentials (api_id and api_hash)
+- Python 3.8 or higher
+- Telegram account (free or premium)
+- API credentials from [my.telegram.org](https://my.telegram.org)
 
 ### Installation
 
@@ -55,204 +61,314 @@ cd telegram-media-downloader
 pip install -r requirements.txt
 ```
 
-3. **Get your Telegram API credentials:**
-   - Visit https://my.telegram.org/
-   - Log in with your phone number
-   - Create a new application
-   - Copy the API ID and API Hash
-
-### Usage
-
-#### Method 1: Interactive Setup (Recommended)
+3. **Run the interactive setup:**
 ```bash
 python3 run.py
 ```
 
-#### Method 2: Command Line
-```bash
-python3 telegram_media_downloader.py --target "https://t.me/groupname"
-```
+### Interactive Setup
 
-#### Method 3: Custom Directory
-```bash
-python3 telegram_media_downloader.py --target "group" --download-dir "/path/to/downloads"
-```
+The script provides an interactive setup that guides you through:
 
-#### Method 4: Save API Credentials
-```bash
-python3 telegram_media_downloader.py --api-id "YOUR_ID" --api-hash "YOUR_HASH" --save-credentials
-```
+1. **API Credentials**: Enter your `api_id` and `api_hash`
+2. **Download Directory**: Choose where to save files
+3. **Target Group/Channel**: Set the default group to download from
+4. **Account Type**: Select free or premium account
+5. **File Size Limits**: Set maximum file size or ignore limits
+6. **Media Types**: Choose which types to download
 
 ## Configuration
 
-### Default Settings (Safe for Free Accounts)
+### Basic Configuration
+
+Edit `config.json` to customize settings:
 
 ```json
 {
+  "api_id": "YOUR_API_ID",
+  "api_hash": "YOUR_API_HASH",
+  "session_name": "telegram_downloader",
+  "target_group": "https://t.me/example_channel",
+  "download_dir": "/path/to/downloads",
+  "account_type": "premium",
   "max_concurrent": 3,
-  "delay_between_batches": 5,
-  "batch_size": 20,
-  "account_type": "free"
+  "batch_size": 8,
+  "delay_between_batches": 8
 }
 ```
 
-### Premium Account Settings
+### Target Group Configuration
 
+You can set a default group/channel in the config file:
+
+```json
+{
+  "target_group": "https://t.me/example_channel"
+}
+```
+
+**Supported formats:**
+- `https://t.me/channel_name`
+- `@channel_name`
+- `channel_name`
+- `https://t.me/joinchat/abcdef123456` (private channels)
+
+### Account Type Settings
+
+#### Premium Account (Recommended)
 ```json
 {
   "account_type": "premium",
-  "max_concurrent": 10,
-  "delay_between_batches": 3,
-  "batch_size": 50
+  "premium_settings": {
+    "max_concurrent": 3,
+    "delay_between_batches": 8,
+    "batch_size": 8
+  }
 }
 ```
 
-## Advanced Features
-
-### Concurrent Downloads
-Enable multiple simultaneous downloads:
-```bash
-python3 telegram_media_downloader.py --target "group" --max-concurrent 5
+#### Free Account (Conservative)
+```json
+{
+  "account_type": "free",
+  "free_settings": {
+    "max_concurrent": 1,
+    "delay_between_batches": 15,
+    "batch_size": 5
+  }
+}
 ```
 
-### Date Filtering
-Download files from specific date range:
+## Usage
+
+### Command Line Usage
+
 ```bash
-python3 telegram_media_downloader.py --target "group" --start-date "2025-01-01" --end-date "2025-12-31"
+# Use target from config.json
+python3 telegram_media_downloader.py
+
+# Override target from command line
+python3 telegram_media_downloader.py --target "https://t.me/channel_name"
+
+# With custom config
+python3 telegram_media_downloader.py --config custom_config.json
+
+# Ignore file size limits
+python3 telegram_media_downloader.py --ignore-size-limit
+
+# Date filtering
+python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31
+
+# Password protected channel
+python3 telegram_media_downloader.py --password "channel_password" --target "https://t.me/private_channel"
 ```
 
-### Password-Protected Channels
-Access private channels with password:
+### Interactive Mode
+
 ```bash
-python3 telegram_media_downloader.py --target "private_channel" --password "channel_password"
+# Start interactive setup
+python3 run.py
+
+# Quick start guide
+python3 quick_start.py
 ```
 
-### CSV Export
-Export download statistics to CSV:
-```bash
-python3 telegram_media_downloader.py --target "group" --csv-export
+### Target Group Priority
+
+The script uses target groups in this order:
+
+1. **Command line argument** (`--target`) - Highest priority
+2. **Config file** (`target_group`) - If no command line argument
+3. **Interactive input** - If neither is provided
+
+## File Organization
+
+### Automatic Date-Based Organization
+Files are automatically organized by date:
+
+```
+downloads/
+├── 2024-01/
+│   ├── photo_123.jpg
+│   ├── document_456.pdf
+│   └── video_789.mp4
+├── 2024-02/
+│   ├── photo_101.jpg
+│   └── audio_202.mp3
+└── 2024-03/
+    └── photo_303.jpg
 ```
 
-### Ignore File Size Limits
-Download all files regardless of size:
-```bash
-python3 telegram_media_downloader.py --target "group" --ignore-size-limit
-```
+### File Naming Convention
+- **Photos**: `photo_[message_id].jpg`
+- **Documents**: Original filename preserved
+- **Videos**: Original filename preserved
+- **Duplicates**: `filename_1.ext`, `filename_2.ext`
+
+### Supported File Types
+- **Images**: jpg, jpeg, png, gif
+- **Videos**: mp4, avi, mov
+- **Documents**: pdf, doc, docx, txt, sql, csv, json, xml
+- **Archives**: zip, rar
+- **Audio**: mp3, wav
+
+## Performance Tips
+
+### For Premium Accounts
+- Use 3-5 concurrent downloads
+- 8-10 second delays between batches
+- 8-10 files per batch
+
+### For Free Accounts
+- Use 1 concurrent download
+- 15-20 second delays between batches
+- 5 files per batch
+
+### Rate Limiting Guidelines
+
+| Account Type | Max Concurrent | Delay (seconds) | Batch Size |
+|--------------|----------------|-----------------|------------|
+| Free         | 1              | 15-20           | 5          |
+| Premium      | 3-5            | 8-10            | 8-10       |
 
 ## Troubleshooting
 
 ### Common Issues
 
-#### 1. FloodWaitError - Rate Limiting
-**Problem:** Telegram is blocking requests due to high speed
-```
-Sleeping for 1s (0:00:01) on GetFileRequest flood wait
-```
+#### FloodWaitError
+**Problem**: Telegram rate limiting
+**Solution**: 
+- Increase delays between batches
+- Reduce concurrent downloads
+- Switch to free account settings
 
-**Solutions:**
-- Reduce `max_concurrent` to 3-5
-- Increase `delay_between_batches` to 5-10 seconds
-- Use `account_type: "free"` settings
-- Wait 1-2 hours before retrying
-
-#### 2. Connection Issues
-**Problem:** Cannot connect to Telegram servers
-
-**Solutions:**
+#### Connection Issues
+**Problem**: Network connectivity problems
+**Solution**:
 - Check internet connection
 - Verify API credentials
-- Try using VPN if blocked
-- Check if Telegram is accessible in your region
+- Try different session name
 
-#### 3. Large File Downloads
-**Problem:** Files are being skipped due to size limits
+#### Large Files
+**Problem**: Files too large to download
+**Solution**:
+- Set `ignore_file_size_limit: true`
+- Increase `max_file_size_mb`
+- Use premium account
 
-**Solutions:**
-- Use `--ignore-size-limit` flag
-- Increase `max_file_size_mb` in config.json
-- Ensure sufficient disk space
-
-#### 4. Memory Issues
-**Problem:** High memory usage during downloads
-
-**Solutions:**
-- Reduce `max_concurrent` to 2-3
-- Decrease `batch_size` to 10-20
-- Enable automatic cleanup in config
-
-### Performance Tips
-
-#### For Free Accounts:
-- Use `max_concurrent: 3`
-- Set `delay_between_batches: 5`
-- Keep `batch_size: 20`
-- Avoid downloading during peak hours
-
-#### For Premium Accounts:
-- Use `max_concurrent: 10`
-- Set `delay_between_batches: 3`
-- Increase `batch_size: 50`
+#### Memory Issues
+**Problem**: High memory usage
+**Solution**:
+- Reduce batch size
+- Enable automatic cleanup
 - Monitor memory usage
 
-### Rate Limiting Guidelines
+#### Target Group Issues
+**Problem**: Cannot access target group/channel
+**Solution**:
+- Verify group link is correct
+- Check if group is public or you have access
+- Use password for private channels
+- Try different link format
 
-| Account Type | Max Concurrent | Delay (seconds) | Batch Size |
-|-------------|----------------|-----------------|------------|
-| Free        | 3              | 5               | 20         |
-| Premium     | 10             | 3               | 50         |
+### Error Messages
 
-## File Organization
-
-Files are organized by date in the download directory:
 ```
-downloads/
-├── 2025-07-31/
-│   ├── photo_001.jpg
-│   ├── video_002.mp4
-│   └── document_003.pdf
-└── 2025-08-01/
-    └── ...
+ERROR: FloodWaitError - Too many requests
+```
+→ Increase delays, reduce concurrent downloads
+
+```
+ERROR: Session password required
+```
+→ Add `--password` parameter
+
+```
+ERROR: File too large
+```
+→ Set `ignore_file_size_limit: true`
+
+```
+ERROR: Target is required!
+```
+→ Set `target_group` in config.json or use `--target` argument
+
+## Advanced Features
+
+### Resume Downloads
+The script automatically saves progress and can resume from where it stopped:
+
+```bash
+# Stop the script (Ctrl+C)
+# Restart later - it will resume automatically
+python3 telegram_media_downloader.py
 ```
 
-## Supported File Types
+### CSV Export
+Export download statistics to CSV:
 
-### Images
-- JPG, JPEG, PNG, GIF
+```json
+{
+  "csv_export": true
+}
+```
 
-### Videos
-- MP4, AVI, MOV
+### State Encryption
+Encrypt state files for security:
 
-### Documents
-- PDF, DOC, DOCX, ZIP, RAR
+```json
+{
+  "encryption_key": "your-secret-key-here"
+}
+```
 
-### Text Files
-- TXT, SQL, CSV, JSON, XML
+### Memory Monitoring
+Track memory usage in real-time:
 
-### Audio
-- MP3, WAV
+```json
+{
+  "memory_limit_mb": 1000
+}
+```
 
-## Telegram Account Types and Limits
+### Target Group Management
+Set and manage target groups:
 
-### Free Account Limits
-- **Concurrent Downloads:** 3-5
-- **Batch Size:** 20-50 files
-- **Delay Between Requests:** 5-10 seconds
-- **Daily Download Limit:** ~2GB
+```json
+{
+  "target_group": "https://t.me/example_channel"
+}
+```
 
-### Premium Account Benefits
-- **Concurrent Downloads:** 10-20
-- **Batch Size:** 50-200 files
-- **Delay Between Requests:** 1-3 seconds
-- **Daily Download Limit:** ~4GB
-- **Faster Download Speeds**
+## Development
 
-## Contributing
+### Project Structure
+```
+telegram-media-downloader/
+├── telegram_media_downloader.py  # Main script
+├── run.py                        # Interactive runner
+├── quick_start.py                # Quick start guide
+├── config.json                   # Configuration
+├── requirements.txt              # Dependencies
+├── utils/                        # Utility modules
+├── logs/                         # Log files
+└── downloads/                    # Downloaded files
+```
 
+### Contributing
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+4. Submit a pull request
+
+### Testing
+```bash
+# Run tests
+python3 test_downloader.py
+
+# Test configuration
+python3 -c "import telegram_media_downloader"
+```
 
 ## License
 
@@ -260,13 +376,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Support
 
-- **Issues:** [GitHub Issues](https://github.com/1BitCode-Com/telegram-media-downloader/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/1BitCode-Com/telegram-media-downloader/discussions)
-- **Security:** [Security Policy](SECURITY.md)
+- **GitHub Issues**: Report bugs and request features
+- **Documentation**: Check [QUICK_START.md](QUICK_START.md) for detailed guide
+- **Security**: Report security issues privately
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes.
+See [CHANGELOG.md](CHANGELOG.md) for a complete list of changes and updates.
 
 ---
 
