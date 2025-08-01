@@ -40,6 +40,7 @@ A powerful and efficient Python script for downloading media files from Telegram
 - **Automatic Cleanup**: Remove temporary and old files
 - **File Size Limits**: Configurable file size restrictions
 - **Extension Filtering**: Download only specific file types
+- **Duplicate File Handling**: Overwrite or create unique names for existing files
 
 ## Quick Start
 
@@ -93,7 +94,8 @@ Edit `config.json` to customize settings:
   "account_type": "premium",
   "max_concurrent": 3,
   "batch_size": 8,
-  "delay_between_batches": 8
+  "delay_between_batches": 8,
+  "overwrite_existing_files": true
 }
 ```
 
@@ -155,6 +157,9 @@ python3 telegram_media_downloader.py --config custom_config.json
 
 # Ignore file size limits
 python3 telegram_media_downloader.py --ignore-size-limit
+
+# Overwrite existing files
+python3 telegram_media_downloader.py --overwrite
 
 # Date filtering
 python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31
@@ -338,6 +343,28 @@ Set and manage target groups:
 {
   "target_group": "https://t.me/example_channel"
 }
+```
+
+### Duplicate File Handling
+Control how the script handles existing files:
+
+```json
+{
+  "overwrite_existing_files": true
+}
+```
+
+**Options:**
+- `true`: Overwrite existing files (saves space)
+- `false`: Create unique names (preserves old files)
+
+**Command line:**
+```bash
+# Overwrite existing files
+python3 telegram_media_downloader.py --overwrite
+
+# Create unique names (default)
+python3 telegram_media_downloader.py
 ```
 
 ## Development
