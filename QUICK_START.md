@@ -89,7 +89,8 @@ python3 telegram_media_downloader.py --target "https://t.me/different_channel"
   "delay_between_batches": 15,
   "batch_size": 5,
   "max_file_size_mb": 10,
-  "target_group": "https://t.me/example_channel"
+  "target_group": "https://t.me/example_channel",
+  "overwrite_existing_files": true
 }
 ```
 
@@ -101,7 +102,8 @@ python3 telegram_media_downloader.py --target "https://t.me/different_channel"
   "delay_between_batches": 8,
   "batch_size": 8,
   "max_file_size_mb": 10,
-  "target_group": "https://t.me/example_channel"
+  "target_group": "https://t.me/example_channel",
+  "overwrite_existing_files": true
 }
 ```
 
@@ -115,7 +117,8 @@ python3 telegram_media_downloader.py --target "https://t.me/different_channel"
   "delay_between_batches": 5,
   "batch_size": 10,
   "ignore_file_size_limit": true,
-  "target_group": "https://t.me/example_channel"
+  "target_group": "https://t.me/example_channel",
+  "overwrite_existing_files": true
 }
 ```
 
@@ -127,7 +130,8 @@ python3 telegram_media_downloader.py --target "https://t.me/different_channel"
   "delay_between_batches": 20,
   "batch_size": 3,
   "max_file_size_mb": 5,
-  "target_group": "https://t.me/example_channel"
+  "target_group": "https://t.me/example_channel",
+  "overwrite_existing_files": false
 }
 ```
 
@@ -152,6 +156,9 @@ python3 telegram_media_downloader.py --download-dir "/media/pc/downloads"
 
 # Ignore file size limits
 python3 telegram_media_downloader.py --ignore-size-limit
+
+# Overwrite existing files
+python3 telegram_media_downloader.py --overwrite
 
 # Date filtering
 python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31
@@ -200,6 +207,38 @@ downloads/
 - **Documents**: Original filename preserved
 - **Videos**: Original filename preserved
 - **Duplicates**: `filename_1.ext`, `filename_2.ext`
+
+### Duplicate File Handling
+Control how existing files are handled:
+
+#### Overwrite Mode (Recommended for updates)
+```json
+{
+  "overwrite_existing_files": true
+}
+```
+- ✅ **Overwrites existing files**
+- ✅ **Saves disk space**
+- ✅ **Keeps only latest version**
+
+#### Unique Names Mode (Default)
+```json
+{
+  "overwrite_existing_files": false
+}
+```
+- ✅ **Creates unique names**
+- ✅ **Preserves old files**
+- ✅ **Prevents data loss**
+
+#### Command Line Usage
+```bash
+# Overwrite existing files
+python3 telegram_media_downloader.py --overwrite
+
+# Create unique names (default)
+python3 telegram_media_downloader.py
+```
 
 ## Supported File Types
 
