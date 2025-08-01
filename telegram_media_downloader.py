@@ -486,17 +486,17 @@ class TelegramMediaDownloader:
             file_path = self.file_organizer.get_file_path(message.date, filename)
             file_path = self.file_organizer.generate_unique_filename(file_path)
             
-            # Add small delay before download (human-like)
+            # Add small delay before download (natural behavior)
             import random
-            pre_download_delay = random.uniform(0.1, 0.5)  # Reduced from 0.5-2.0
+            pre_download_delay = random.uniform(0.1, 0.3)  # Very short delay
             await asyncio.sleep(pre_download_delay)
             
             # Download file
             logging.info(f"Downloading: {filename}")
             await self.client.download_media(message.media, str(file_path))
             
-            # Add small delay after download (human-like)
-            post_download_delay = random.uniform(0.1, 0.3)  # Reduced from 0.5-1.5
+            # Add small delay after download (natural behavior)
+            post_download_delay = random.uniform(0.1, 0.2)  # Very short delay
             await asyncio.sleep(post_download_delay)
             
             # Update progress
@@ -577,27 +577,24 @@ class TelegramMediaDownloader:
                 # Process batch when full or at end
                 if len(messages_to_download) >= self.config["batch_size"] or batch_count % self.config["batch_size"] == 0:
                     if messages_to_download:
-                        # Download messages one by one (more human-like)
+                        # Download messages concurrently (15 files at once)
+                        tasks = []
                         for msg in messages_to_download:
-                            try:
-                                if self.config.get("concurrent_downloads", False):
-                                    result = await self.download_media_concurrent(msg, entity)
-                                else:
-                                    result = await self.download_media(msg, entity)
-                                
-                                if result:
-                                    downloaded_files.append(msg.id)
-                                
-                                # Add small random delay between files (human-like)
-                                import random
-                                random_delay = random.uniform(0.2, 1.0)  # Reduced from 1-3 seconds
-                                await asyncio.sleep(random_delay)
-                                
-                            except Exception as e:
-                                logging.error(f"Download failed: {e}")
+                            task = self.download_media_concurrent(msg, entity)
+                            tasks.append(task)
+                        
+                        # Wait for all downloads in batch to complete
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        
+                        # Process results
+                        for i, result in enumerate(results):
+                            if isinstance(result, Exception):
+                                logging.error(f"Download failed: {result}")
+                            elif result:
+                                downloaded_files.append(messages_to_download[i].id)
                         
                         # Update concurrent info
-                        self.progress_tracker.set_concurrent_info(1, self.config.get("max_concurrent", 1))
+                        self.progress_tracker.set_concurrent_info(len(tasks), self.config.get("max_concurrent", 15))
                         
                         # Clear batch
                         messages_to_download = []
@@ -607,12 +604,12 @@ class TelegramMediaDownloader:
                         self.state_manager.save_state(message.id, downloaded_files)
                         logging.info(f"Batch {batch_count // self.config['batch_size']} completed")
                         
-                        # Add longer delay between batches (human-like)
+                        # Add delay between batches (natural behavior)
                         base_delay = self.config["delay_between_batches"]
                         import random
-                        random_additional = random.uniform(1, 3)  # Reduced from 5-10 seconds
+                        random_additional = random.uniform(2, 5)  # 2-5 seconds extra
                         total_delay = base_delay + random_additional
-                        logging.info(f"Taking a break for {total_delay:.1f} seconds (human-like behavior)")
+                        logging.info(f"Taking a break for {total_delay:.1f} seconds (natural behavior)")
                         await asyncio.sleep(total_delay)
                 
                 # Update progress
