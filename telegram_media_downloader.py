@@ -65,7 +65,8 @@ DEFAULT_CONFIG = {
     "max_concurrent": 3,
     "auto_cleanup": False,
     "cleanup_temp_files": True,
-    "cleanup_interval_hours": 24
+    "cleanup_interval_hours": 24,
+    "overwrite_existing_files": False
 }
 
 class StateManager:
@@ -144,9 +145,10 @@ class StateManager:
 class FileOrganizer:
     """Organizes downloaded files into folders"""
     
-    def __init__(self, download_dir: str, create_date_folders: bool = True):
+    def __init__(self, download_dir: str, create_date_folders: bool = True, config: Dict[str, Any] = None):
         self.download_dir = Path(download_dir)
         self.create_date_folders = create_date_folders
+        self.config = config or {}
         self.download_dir.mkdir(exist_ok=True)
     
     def get_file_path(self, message_date: datetime, filename: str) -> Path:
@@ -165,6 +167,12 @@ class FileOrganizer:
         if not file_path.exists():
             return file_path
         
+        # Check if we should overwrite existing files
+        if self.config.get("overwrite_existing_files", False):
+            logging.info(f"Overwriting existing file: {file_path}")
+            return file_path
+        
+        # Generate unique filename
         counter = 1
         stem = file_path.stem
         suffix = file_path.suffix
@@ -281,7 +289,7 @@ class TelegramMediaDownloader:
         self.config = config
         self.client = None
         self.state_manager = StateManager(config["state_file"], config.get("encryption_key"))
-        self.file_organizer = FileOrganizer(config["download_dir"], config["create_date_folders"])
+        self.file_organizer = FileOrganizer(config["download_dir"], config["create_date_folders"], config)
         self.progress_tracker = ProgressTracker()
         self.download_queue = asyncio.Queue()
         
@@ -480,7 +488,7 @@ class TelegramMediaDownloader:
             
             # Add small delay before download (human-like)
             import random
-            pre_download_delay = random.uniform(0.5, 2.0)
+            pre_download_delay = random.uniform(0.1, 0.5)  # Reduced from 0.5-2.0
             await asyncio.sleep(pre_download_delay)
             
             # Download file
@@ -488,7 +496,7 @@ class TelegramMediaDownloader:
             await self.client.download_media(message.media, str(file_path))
             
             # Add small delay after download (human-like)
-            post_download_delay = random.uniform(0.5, 1.5)
+            post_download_delay = random.uniform(0.1, 0.3)  # Reduced from 0.5-1.5
             await asyncio.sleep(post_download_delay)
             
             # Update progress
@@ -582,7 +590,7 @@ class TelegramMediaDownloader:
                                 
                                 # Add small random delay between files (human-like)
                                 import random
-                                random_delay = random.uniform(1, 3)
+                                random_delay = random.uniform(0.2, 1.0)  # Reduced from 1-3 seconds
                                 await asyncio.sleep(random_delay)
                                 
                             except Exception as e:
@@ -602,7 +610,7 @@ class TelegramMediaDownloader:
                         # Add longer delay between batches (human-like)
                         base_delay = self.config["delay_between_batches"]
                         import random
-                        random_additional = random.uniform(5, 10)  # 5-10 seconds extra
+                        random_additional = random.uniform(1, 3)  # Reduced from 5-10 seconds
                         total_delay = base_delay + random_additional
                         logging.info(f"Taking a break for {total_delay:.1f} seconds (human-like behavior)")
                         await asyncio.sleep(total_delay)
@@ -710,6 +718,7 @@ async def main():
     parser.add_argument("--cleanup", action="store_true", help="Enable automatic cleanup of downloaded files")
     parser.add_argument("--account-type", choices=["free", "premium"], help="Telegram account type (free/premium)")
     parser.add_argument("--ignore-size-limit", action="store_true", help="Ignore file size limits")
+    parser.add_argument("--overwrite", action="store_true", help="Overwrite existing files instead of creating unique names")
     
     args = parser.parse_args()
     
@@ -806,6 +815,8 @@ async def main():
         config["cleanup_interval_hours"] = args.cleanup_interval_hours
     if args.ignore_size_limit:
         config["ignore_file_size_limit"] = True
+    if args.overwrite:
+        config["overwrite_existing_files"] = True
     
     # Save credentials if requested
     if args.save_credentials and args.api_id and args.api_hash:
