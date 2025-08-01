@@ -126,7 +126,11 @@ class StateManager:
                 "last_updated": datetime.now().isoformat()
             }
             
-            os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+            # Ensure state file directory exists
+            state_dir = os.path.dirname(self.state_file)
+            if state_dir:  # Only create directory if path is not empty
+                os.makedirs(state_dir, exist_ok=True)
+            
             fernet = self._get_fernet()
             
             if fernet:
@@ -488,7 +492,7 @@ class TelegramMediaDownloader:
             
             # Add small delay before download (natural behavior)
             import random
-            pre_download_delay = random.uniform(0.1, 0.3)  # Very short delay
+            pre_download_delay = random.uniform(0.5, 2.0)  # 0.5-2 seconds random delay
             await asyncio.sleep(pre_download_delay)
             
             # Download file
@@ -496,7 +500,7 @@ class TelegramMediaDownloader:
             await self.client.download_media(message.media, str(file_path))
             
             # Add small delay after download (natural behavior)
-            post_download_delay = random.uniform(0.1, 0.2)  # Very short delay
+            post_download_delay = random.uniform(0.5, 1.5)  # 0.5-1.5 seconds random delay
             await asyncio.sleep(post_download_delay)
             
             # Update progress
@@ -577,7 +581,7 @@ class TelegramMediaDownloader:
                 # Process batch when full or at end
                 if len(messages_to_download) >= self.config["batch_size"] or batch_count % self.config["batch_size"] == 0:
                     if messages_to_download:
-                        # Download messages concurrently (15 files at once)
+                        # Download messages concurrently (5 files at once)
                         tasks = []
                         for msg in messages_to_download:
                             task = self.download_media_concurrent(msg, entity)
@@ -593,8 +597,14 @@ class TelegramMediaDownloader:
                             elif result:
                                 downloaded_files.append(messages_to_download[i].id)
                         
+                        # Add random delay after batch completion
+                        import random
+                        batch_delay = random.uniform(2, 8)  # 2-8 seconds random delay
+                        logging.info(f"Batch completed. Taking random break for {batch_delay:.1f} seconds")
+                        await asyncio.sleep(batch_delay)
+                        
                         # Update concurrent info
-                        self.progress_tracker.set_concurrent_info(len(tasks), self.config.get("max_concurrent", 15))
+                        self.progress_tracker.set_concurrent_info(len(tasks), self.config.get("max_concurrent", 5))
                         
                         # Clear batch
                         messages_to_download = []
@@ -607,7 +617,7 @@ class TelegramMediaDownloader:
                         # Add delay between batches (natural behavior)
                         base_delay = self.config["delay_between_batches"]
                         import random
-                        random_additional = random.uniform(2, 5)  # 2-5 seconds extra
+                        random_additional = random.uniform(1, 3)  # 1-3 seconds extra
                         total_delay = base_delay + random_additional
                         logging.info(f"Taking a break for {total_delay:.1f} seconds (natural behavior)")
                         await asyncio.sleep(total_delay)
