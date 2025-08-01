@@ -339,16 +339,16 @@ class TelegramMediaDownloader:
         
         if account_type == "premium":
             premium_settings = self.config.get("premium_settings", {})
-            self.config["max_concurrent"] = premium_settings.get("max_concurrent", 50)
-            self.config["delay_between_batches"] = premium_settings.get("delay_between_batches", 1)
-            self.config["batch_size"] = premium_settings.get("batch_size", 200)
-            logging.info("Using Premium account settings (50 concurrent downloads, faster speed)")
+            self.config["max_concurrent"] = premium_settings.get("max_concurrent", 3)
+            self.config["delay_between_batches"] = premium_settings.get("delay_between_batches", 8)
+            self.config["batch_size"] = premium_settings.get("batch_size", 8)
+            logging.info("Using Premium account settings (3 concurrent downloads, 8s delay, human-like behavior)")
         else:
             free_settings = self.config.get("free_settings", {})
-            self.config["max_concurrent"] = free_settings.get("max_concurrent", 10)
-            self.config["delay_between_batches"] = free_settings.get("delay_between_batches", 3)
-            self.config["batch_size"] = free_settings.get("batch_size", 50)
-            logging.info("Using Free account settings (10 concurrent downloads, slower speed)")
+            self.config["max_concurrent"] = free_settings.get("max_concurrent", 1)
+            self.config["delay_between_batches"] = free_settings.get("delay_between_batches", 15)
+            self.config["batch_size"] = free_settings.get("batch_size", 5)
+            logging.info("Using Free account settings (1 concurrent download, 15s delay, very conservative)")
     
     def cleanup_temp_files(self):
         """Clean up temporary files and old downloads"""
@@ -478,9 +478,18 @@ class TelegramMediaDownloader:
             file_path = self.file_organizer.get_file_path(message.date, filename)
             file_path = self.file_organizer.generate_unique_filename(file_path)
             
+            # Add small delay before download (human-like)
+            import random
+            pre_download_delay = random.uniform(0.5, 2.0)
+            await asyncio.sleep(pre_download_delay)
+            
             # Download file
             logging.info(f"Downloading: {filename}")
             await self.client.download_media(message.media, str(file_path))
+            
+            # Add small delay after download (human-like)
+            post_download_delay = random.uniform(0.5, 1.5)
+            await asyncio.sleep(post_download_delay)
             
             # Update progress
             self.progress_tracker.update(True, file_size, filename, str(file_path))
@@ -491,6 +500,12 @@ class TelegramMediaDownloader:
         except Exception as e:
             logging.error(f"Error downloading media from message {message.id}: {e}")
             self.progress_tracker.update(False)
+            
+            # Add longer delay on error (human-like)
+            import random
+            error_delay = random.uniform(3, 8)
+            await asyncio.sleep(error_delay)
+            
             return False
     
     async def download_from_entity(self, target: str):
@@ -554,27 +569,27 @@ class TelegramMediaDownloader:
                 # Process batch when full or at end
                 if len(messages_to_download) >= self.config["batch_size"] or batch_count % self.config["batch_size"] == 0:
                     if messages_to_download:
-                        # Download messages concurrently
-                        tasks = []
+                        # Download messages one by one (more human-like)
                         for msg in messages_to_download:
-                            if self.config.get("concurrent_downloads", True):
-                                task = self.download_media_concurrent(msg, entity)
-                            else:
-                                task = self.download_media(msg, entity)
-                            tasks.append(task)
-                        
-                        # Wait for all downloads in batch to complete
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        
-                        # Process results
-                        for i, result in enumerate(results):
-                            if isinstance(result, Exception):
-                                logging.error(f"Download failed: {result}")
-                            elif result:
-                                downloaded_files.append(messages_to_download[i].id)
+                            try:
+                                if self.config.get("concurrent_downloads", False):
+                                    result = await self.download_media_concurrent(msg, entity)
+                                else:
+                                    result = await self.download_media(msg, entity)
+                                
+                                if result:
+                                    downloaded_files.append(msg.id)
+                                
+                                # Add small random delay between files (human-like)
+                                import random
+                                random_delay = random.uniform(1, 3)
+                                await asyncio.sleep(random_delay)
+                                
+                            except Exception as e:
+                                logging.error(f"Download failed: {e}")
                         
                         # Update concurrent info
-                        self.progress_tracker.set_concurrent_info(len(tasks), self.config.get("max_concurrent", 3))
+                        self.progress_tracker.set_concurrent_info(1, self.config.get("max_concurrent", 1))
                         
                         # Clear batch
                         messages_to_download = []
@@ -584,8 +599,13 @@ class TelegramMediaDownloader:
                         self.state_manager.save_state(message.id, downloaded_files)
                         logging.info(f"Batch {batch_count // self.config['batch_size']} completed")
                         
-                        # Add delay to avoid rate limiting
-                        await asyncio.sleep(self.config["delay_between_batches"])
+                        # Add longer delay between batches (human-like)
+                        base_delay = self.config["delay_between_batches"]
+                        import random
+                        random_additional = random.uniform(5, 10)  # 5-10 seconds extra
+                        total_delay = base_delay + random_additional
+                        logging.info(f"Taking a break for {total_delay:.1f} seconds (human-like behavior)")
+                        await asyncio.sleep(total_delay)
                 
                 # Update progress
                 self.progress_tracker.total_files += 1
@@ -798,10 +818,16 @@ async def main():
         print("Or use --setup for interactive setup")
         sys.exit(1)
     
-    if not args.target:
-        print("Error: Target is required!")
-        print("Please provide --target argument or use --setup for interactive mode")
-        sys.exit(1)
+    # Get target from command line or config file
+    target = args.target
+    if not target:
+        target = config.get("target_group")
+        if not target:
+            print("Error: Target is required!")
+            print("Please provide --target argument, set target_group in config.json, or use --setup for interactive mode")
+            sys.exit(1)
+        else:
+            print(f"Using target from config.json: {target}")
     
     # Create downloader and start
     downloader = TelegramMediaDownloader(config)
@@ -832,7 +858,7 @@ async def main():
     
     try:
         await downloader.initialize_client()
-        await downloader.download_from_entity(args.target)
+        await downloader.download_from_entity(target)
     except KeyboardInterrupt:
         logging.info("Download interrupted by user")
     except Exception as e:
