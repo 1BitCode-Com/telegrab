@@ -2,14 +2,16 @@
   "api_id": "",
   "api_hash": "",
   "session_name": "telegram_downloader",
-  "download_dir": "/media/pc/telegram_downloader",
+  "target_group": "https://t.me/example_channel",
+  "download_dir": "/path/to/downloads",
   "state_file": "download_state.json",
   "log_file": "logs/downloader.log",
   "max_workers": 3,
-  "batch_size": 20,
-  "delay_between_batches": 5,
+  "batch_size": 10,
+  "delay_between_batches": 3,
   "max_file_size_mb": 10,
   "ignore_file_size_limit": true,
+  "overwrite_existing_files": true,
   "allowed_extensions": [
     "jpg",
     "jpeg",
@@ -42,15 +44,15 @@
   "auto_cleanup": false,
   "cleanup_temp_files": true,
   "cleanup_interval_hours": 24,
-  "account_type": "free",
+  "account_type": "premium",
   "premium_settings": {
-    "max_concurrent": 10,
+    "max_concurrent": 5,
     "delay_between_batches": 3,
-    "batch_size": 50
+    "batch_size": 10
   },
   "free_settings": {
-    "max_concurrent": 3,
-    "delay_between_batches": 5,
-    "batch_size": 20
+    "max_concurrent": 1,
+    "delay_between_batches": 15,
+    "batch_size": 5
   }
 }
