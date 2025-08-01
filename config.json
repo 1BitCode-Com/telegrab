@@ -43,9 +43,9 @@
   "cleanup_interval_hours": 24,
   "account_type": "premium",
   "premium_settings": {
-    "max_concurrent": 5,
-    "delay_between_batches": 3,
-    "batch_size": 10
+    "max_concurrent": 3,
+    "delay_between_batches": 8,
+    "batch_size": 3
   },
   "free_settings": {
     "max_concurrent": 1,
