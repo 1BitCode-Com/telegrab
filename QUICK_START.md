@@ -52,6 +52,7 @@ python3 run.py
 The interactive setup will guide you through:
 - API credentials entry
 - Download directory selection
+- **Target group/channel configuration**
 - Account type configuration
 - File size limit settings
 
@@ -61,6 +62,7 @@ The interactive setup will guide you through:
 {
   "api_id": "YOUR_API_ID",
   "api_hash": "YOUR_API_HASH",
+  "target_group": "https://t.me/example_channel",
   "download_dir": "/path/to/downloads",
   "account_type": "premium"
 }
@@ -68,7 +70,11 @@ The interactive setup will guide you through:
 
 2. Run the script:
 ```bash
-python3 telegram_media_downloader.py "https://t.me/channel_name"
+# Use target from config.json
+python3 telegram_media_downloader.py
+
+# Or override with command line
+python3 telegram_media_downloader.py --target "https://t.me/different_channel"
 ```
 
 ## Configuration
@@ -82,7 +88,8 @@ python3 telegram_media_downloader.py "https://t.me/channel_name"
   "max_concurrent": 1,
   "delay_between_batches": 15,
   "batch_size": 5,
-  "max_file_size_mb": 10
+  "max_file_size_mb": 10,
+  "target_group": "https://t.me/example_channel"
 }
 ```
 
@@ -93,7 +100,8 @@ python3 telegram_media_downloader.py "https://t.me/channel_name"
   "max_concurrent": 3,
   "delay_between_batches": 8,
   "batch_size": 8,
-  "max_file_size_mb": 10
+  "max_file_size_mb": 10,
+  "target_group": "https://t.me/example_channel"
 }
 ```
 
@@ -106,7 +114,8 @@ python3 telegram_media_downloader.py "https://t.me/channel_name"
   "max_concurrent": 5,
   "delay_between_batches": 5,
   "batch_size": 10,
-  "ignore_file_size_limit": true
+  "ignore_file_size_limit": true,
+  "target_group": "https://t.me/example_channel"
 }
 ```
 
@@ -117,7 +126,8 @@ python3 telegram_media_downloader.py "https://t.me/channel_name"
   "max_concurrent": 1,
   "delay_between_batches": 20,
   "batch_size": 3,
-  "max_file_size_mb": 5
+  "max_file_size_mb": 5,
+  "target_group": "https://t.me/example_channel"
 }
 ```
 
@@ -125,26 +135,29 @@ python3 telegram_media_downloader.py "https://t.me/channel_name"
 
 ### Basic Usage
 ```bash
-# Download from public channel
-python3 telegram_media_downloader.py "https://t.me/example_channel"
+# Use target from config.json
+python3 telegram_media_downloader.py
+
+# Download from specific channel
+python3 telegram_media_downloader.py --target "https://t.me/example_channel"
 
 # Download from private group
-python3 telegram_media_downloader.py "https://t.me/private_group"
+python3 telegram_media_downloader.py --target "https://t.me/private_group"
 ```
 
 ### Advanced Usage
 ```bash
 # Custom download directory
-python3 telegram_media_downloader.py --download-dir "/media/pc/downloads" "https://t.me/channel"
+python3 telegram_media_downloader.py --download-dir "/media/pc/downloads"
 
 # Ignore file size limits
-python3 telegram_media_downloader.py --ignore-size-limit "https://t.me/channel"
+python3 telegram_media_downloader.py --ignore-size-limit
 
 # Date filtering
-python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31 "https://t.me/channel"
+python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31
 
 # Password protected channel
-python3 telegram_media_downloader.py --password "channel_password" "https://t.me/private_channel"
+python3 telegram_media_downloader.py --password "channel_password" --target "https://t.me/private_channel"
 ```
 
 ### Interactive Mode
@@ -155,6 +168,14 @@ python3 run.py
 # Quick start guide
 python3 quick_start.py
 ```
+
+### Target Group Priority
+
+The script uses target groups in this order:
+
+1. **Command line argument** (`--target`) - Highest priority
+2. **Config file** (`target_group`) - If no command line argument
+3. **Interactive input** - If neither is provided
 
 ## File Organization
 
@@ -285,6 +306,18 @@ downloads/
 
 3. **Monitor memory usage** in logs
 
+### Target Group Issues
+**Problem**: Cannot access target group/channel
+
+**Solutions**:
+1. **Verify group link** is correct
+2. **Check if group is public** or you have access
+3. **Use password** for private channels
+4. **Try different link format**:
+   - `https://t.me/channel_name`
+   - `@channel_name`
+   - `channel_name`
+
 ## Performance Tips
 
 ### For Free Accounts
@@ -304,6 +337,7 @@ downloads/
 - **Monitor logs**: Check for errors and warnings
 - **Resume safely**: Don't delete state files
 - **Backup important**: Keep copies of config files
+- **Set target group**: Use `target_group` in config.json
 
 ## Rate Limiting Guidelines
 
@@ -331,6 +365,7 @@ downloads/
 - [ ] API credentials obtained
 - [ ] Target channel accessible
 - [ ] Sufficient disk space
+- [ ] Target group set in config.json (optional)
 
 ### During Download
 - [ ] Monitor log files
@@ -371,6 +406,12 @@ python3 test_downloader.py
 
 # Check configuration
 python3 -c "import json; print(json.dumps(json.load(open('config.json')), indent=2))"
+
+# Use target from config
+python3 telegram_media_downloader.py
+
+# Override target
+python3 telegram_media_downloader.py --target "https://t.me/channel"
 ```
 
 ---
