@@ -8,6 +8,7 @@ import asyncio
 import json
 import os
 import sys
+import subprocess
 from telegram_media_downloader import TelegramMediaDownloader, load_config
 
 async def test_connection():
@@ -102,6 +103,20 @@ def test_file_operations():
     print("Test cleanup completed")
     
     return True
+
+def run_test_command(command):
+    """Runs a command and returns its output."""
+    try:
+        # Use python3 explicitly
+        result = subprocess.run(
+            ["python3", "-c", command],
+            capture_output=True,
+            text=True,
+            check=True
+        )
+        return result.stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError) as e:
+        return f"Error: {e}"
 
 async def main():
     """Main test function"""
