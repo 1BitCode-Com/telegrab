@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Interactive runner for Telegram Media Downloader
+Interactive runner for TeleGrab
 Provides a user-friendly interface for configuring and running downloads
 Updated with custom download directory and API credentials saving
 """
@@ -9,12 +9,12 @@ import asyncio
 import json
 import os
 import sys
-from telegram_media_downloader import TelegramMediaDownloader, load_config, save_api_credentials, get_user_input
+from telegrab import TelegramMediaDownloader, load_config, save_api_credentials, get_user_input
 
 def print_banner():
     """Print welcome banner"""
     print("=" * 60)
-    print("    TELEGRAM MEDIA DOWNLOADER - INTERACTIVE RUNNER")
+    print("              TeleGrab - INTERACTIVE RUNNER")
     print("=" * 60)
     print()
 
@@ -205,7 +205,7 @@ def setup_config():
     config = {
         "api_id": api_id,
         "api_hash": api_hash,
-        "session_name": "telegram_downloader",
+        "session_name": "telegrab_session",
         "target_group": target_group,
         "download_dir": download_dir,
         "state_file": "download_state.json",
@@ -260,12 +260,12 @@ def show_usage_examples():
     print("-" * 20)
     
     examples = [
-        ("Download from public group", "python telegram_media_downloader.py --target 'https://t.me/groupname'"),
-        ("Download from private group", "python telegram_media_downloader.py --target '@privategroup'"),
+        ("Download from public group", "python telegrab.py --target 'https://t.me/groupname'"),
+        ("Download from private group", "python telegrab.py --target '@privategroup'"),
         ("Interactive mode", "python run.py"),
-        ("Setup mode", "python telegram_media_downloader.py --setup"),
-        ("Custom download directory", "python telegram_media_downloader.py --target 'group' --download-dir '/path/to/downloads'"),
-        ("Save API credentials", "python telegram_media_downloader.py --api-id '12345' --api-hash 'hash' --save-credentials"),
+        ("Setup mode", "python telegrab.py --setup"),
+        ("Custom download directory", "python telegrab.py --target 'group' --download-dir '/path/to/downloads'"),
+        ("Save API credentials", "python telegrab.py --api-id '12345' --api-hash 'hash' --save-credentials"),
         ("Test installation", "python test_downloader.py"),
         ("Download only photos", "Edit config.json: set 'media_types': ['photo']"),
         ("Limit file size to 10MB", "Edit config.json: set 'max_file_size_mb': 10")
@@ -364,11 +364,11 @@ def main():
     
     print("SETUP COMPLETED!")
     print("=" * 30)
-    print("You can now use the Telegram Media Downloader!")
+    print("You can now use TeleGrab!")
     print("\nNext steps:")
     print("1. Run: python run.py (interactive mode)")
-    print("2. Or run: python telegram_media_downloader.py --setup (setup mode)")
-    print("3. Or run: python telegram_media_downloader.py --target 'YOUR_GROUP_LINK'")
+    print("2. Or run: python telegrab.py --setup (setup mode)")
+    print("3. Or run: python telegrab.py --target 'YOUR_GROUP_LINK'")
     print("4. Check README.md for more information")
     
     # Ask if user wants to start download
