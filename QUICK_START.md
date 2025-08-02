@@ -20,10 +20,10 @@ A comprehensive guide to get you started with TeleGrab v2.0 quickly and efficien
 ### Step 1: Download the Project
 ```bash
 # Clone the repository
-git clone https://github.com/1BitCode-Com/telegram-media-downloader.git
+git clone https://github.com/1BitCode-Com/telegrab.git
 
 # Navigate to project directory
-cd telegram-media-downloader
+cd telegrab
 ```
 
 ### Step 2: Install Dependencies
@@ -70,10 +70,10 @@ The interactive setup will guide you through:
 2. Run the script:
 ```bash
 # This will use the "premium" account settings by default
-python3 telegram_media_downloader.py
+python3 telegrab.py
 
 # To use free account settings, set it in the config or use the CLI argument
-python3 telegram_media_downloader.py --account-type "free"
+python3 telegrab.py --account-type "free"
 ```
 
 ## Key Configuration Options
