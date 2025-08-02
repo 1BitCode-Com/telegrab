@@ -1,7 +1,7 @@
 {
   "api_id": "YOUR_API_ID",
   "api_hash": "YOUR_API_HASH",
-  "session_name": "telegram_downloader",
+  "session_name": "telegrab_session",
   "target_group": "https://t.me/example_channel",
   "download_dir": "downloads",
   "account_type": "premium",
