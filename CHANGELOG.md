@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.0.0] - 2025-08-02
+
+### Added
+- **Robust Chunk-Based Downloading**: Implemented a manual, chunk-by-chunk downloading mechanism with configurable delays (`chunk_delay_ms`) to prevent `GetFileRequest` flood waits and ensure stable parallel downloads.
+- **Just-in-Time File Reference Fetching**: Workers now fetch fresh message data just before downloading to completely resolve `File reference has expired` errors.
+- **Smart State Management**: The download state now accurately tracks the last successfully *downloaded* message ID, preventing the loss of queued files on restart.
+- **Automatic Cleanup of 0-Byte Files**: Automatically detects and deletes empty files created from failed downloads, keeping the download directory clean.
+
+### Changed
+- **Refactored Configuration**: Simplified and reorganized `config.json` to be more intuitive, with `free_settings` and `premium_settings` blocks for clear, hierarchical configuration.
+- **Improved Download Logic**: The core download logic is now more resilient and efficient, focusing on stability for parallel operations.
+
+### Removed
+- **Dead Code and Obsolete Functions**: Removed several unused functions (`is_valid_file_size`, `is_valid_extension`, etc.) and their corresponding CLI arguments (`--ignore-size-limit`, etc.) to clean up the codebase.
+- **Redundant Top-Level Settings**: Cleaned up `config.json` by removing settings that are now managed under `premium_settings` and `free_settings`.
+
 ## [1.0.0] - 2025-07-31
 
 ### Added
