@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Setup script for Telegram Media Downloader
-Updated 31/07/2025
+Updated 02/08/2025
 """
 
 from setuptools import setup, find_packages
@@ -46,7 +46,7 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         "console_scripts": [
-            "telegrab=telegram_media_downloader:main",
+            "telegrab=telegrab:main",
         ],
     },
     include_package_data=True,
