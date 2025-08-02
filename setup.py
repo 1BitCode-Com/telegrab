@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Setup script for Telegram Media Downloader
-Updated 31/07/2025
+Updated 02/08/2025
 """
 
 from setuptools import setup, find_packages
@@ -19,9 +19,9 @@ def read_requirements():
 
 setup(
     name="telegram-media-downloader",
-    version="1.0.0",
+    version="2.0.0",
     author="1BitCode-Com",
-    description="A comprehensive Python script to download media from Telegram groups and channels (2025)",
+    description="The most advanced and stable Telegram media downloader. Features robust parallel downloading, intelligent error handling (FloodWait, Expired Links), and a configurable chunk-based mechanism to bypass API limits. Optimized for massive archives.",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
     url="https://github.com/1BitCode-Com/telegram-media-downloader",
