@@ -3,7 +3,7 @@
 <img src="assets/logo.png" alt="Project Logo" width="200"/>
 
 
-![Telegram Media Downloader](https://img.shields.io/badge/Telegram-Media%20Downloader-blue?style=for-the-badge&logo=telegram)
+![TeleGrab](https://img.shields.io/badge/TeleGrab-Ultimate%20Archiver-blue?style=for-the-badge&logo=telegram)
 ![Python](https://img.shields.io/badge/Python-3.7+-green?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 ![Version](https://img.shields.io/badge/Version-2.0.0-orange?style=for-the-badge)
@@ -16,9 +16,9 @@
 
 ---
 
-# Telegram Media Downloader
+# TeleGrab: The Ultimate Telegram Archiver
 
-A powerful and efficient Python script for downloading media files from Telegram groups and channels with advanced features and human-like behavior.
+TeleGrab: The Ultimate Telegram Channel & Group Archiver. Designed to grab every photo, video, and document, bypassing API limits and handling expired links with ease.
 
 ## Features
 
