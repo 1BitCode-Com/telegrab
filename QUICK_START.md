@@ -1,6 +1,6 @@
 # Quick Start Guide
 
-A comprehensive guide to get you started with Telegram Media Downloader quickly and efficiently.
+A comprehensive guide to get you started with Telegram Media Downloader v2.0 quickly and efficiently.
 
 ## Prerequisites
 
@@ -57,404 +57,73 @@ The interactive setup will guide you through:
 - File size limit settings
 
 ### Method 2: Manual Configuration
-1. Edit `config.json`:
+1. Edit `config.json` and add your API credentials and target group:
 ```json
 {
   "api_id": "YOUR_API_ID",
   "api_hash": "YOUR_API_HASH",
-  "target_group": "https://t.me/example_channel",
-  "download_dir": "/path/to/downloads",
-  "account_type": "premium"
+  "session_name": "telegram_downloader",
+  "target_group": "https://t.me/example_channel"
 }
 ```
 
 2. Run the script:
 ```bash
-# Use target from config.json
+# This will use the "premium" account settings by default
 python3 telegram_media_downloader.py
 
-# Or override with command line
-python3 telegram_media_downloader.py --target "https://t.me/different_channel"
+# To use free account settings, set it in the config or use the CLI argument
+python3 telegram_media_downloader.py --account-type "free"
 ```
 
-## Configuration
+## Key Configuration Options
 
-### Safe Settings (Recommended for Beginners)
+The script is optimized out-of-the-box, but you can fine-tune its performance in `config.json`.
 
-#### Free Account Settings
 ```json
 {
-  "account_type": "free",
-  "max_concurrent": 1,
-  "delay_between_batches": 15,
-  "batch_size": 5,
-  "max_file_size_mb": 10,
-  "target_group": "https://t.me/example_channel",
-  "overwrite_existing_files": true
+    "account_type": "premium",
+    "chunk_delay_ms": 200,
+
+    "premium_settings": {
+        "max_concurrent": 10
+    }
 }
 ```
 
-#### Premium Account Settings
-```json
-{
-  "account_type": "premium",
-  "max_concurrent": 3,
-  "delay_between_batches": 8,
-  "batch_size": 8,
-  "max_file_size_mb": 10,
-  "target_group": "https://t.me/example_channel",
-  "overwrite_existing_files": true
-}
-```
-
-### Performance Settings (Advanced Users)
-
-#### High Performance (Premium Only)
-```json
-{
-  "account_type": "premium",
-  "max_concurrent": 5,
-  "delay_between_batches": 5,
-  "batch_size": 10,
-  "ignore_file_size_limit": true,
-  "target_group": "https://t.me/example_channel",
-  "overwrite_existing_files": true
-}
-```
-
-#### Conservative Settings (Safe for All)
-```json
-{
-  "account_type": "free",
-  "max_concurrent": 1,
-  "delay_between_batches": 20,
-  "batch_size": 3,
-  "max_file_size_mb": 5,
-  "target_group": "https://t.me/example_channel",
-  "overwrite_existing_files": false
-}
-```
-
-## Usage Examples
-
-### Basic Usage
-```bash
-# Use target from config.json
-python3 telegram_media_downloader.py
-
-# Download from specific channel
-python3 telegram_media_downloader.py --target "https://t.me/example_channel"
-
-# Download from private group
-python3 telegram_media_downloader.py --target "https://t.me/private_group"
-```
-
-### Advanced Usage
-```bash
-# Custom download directory
-python3 telegram_media_downloader.py --download-dir "/media/pc/downloads"
-
-# Ignore file size limits
-python3 telegram_media_downloader.py --ignore-size-limit
-
-# Overwrite existing files
-python3 telegram_media_downloader.py --overwrite
-
-# Date filtering
-python3 telegram_media_downloader.py --start-date 2024-01-01 --end-date 2024-12-31
-
-# Password protected channel
-python3 telegram_media_downloader.py --password "channel_password" --target "https://t.me/private_channel"
-```
-
-### Interactive Mode
-```bash
-# Start interactive setup
-python3 run.py
-
-# Quick start guide
-python3 quick_start.py
-```
-
-### Target Group Priority
-
-The script uses target groups in this order:
-
-1. **Command line argument** (`--target`) - Highest priority
-2. **Config file** (`target_group`) - If no command line argument
-3. **Interactive input** - If neither is provided
-
-## File Organization
-
-### Automatic Date-Based Organization
-Files are automatically organized by date:
-
-```
-downloads/
-├── 2024-01/
-│   ├── photo_123.jpg
-│   ├── document_456.pdf
-│   └── video_789.mp4
-├── 2024-02/
-│   ├── photo_101.jpg
-│   └── audio_202.mp3
-└── 2024-03/
-    └── photo_303.jpg
-```
-
-### File Naming Convention
-- **Photos**: `photo_[message_id].jpg`
-- **Documents**: Original filename preserved
-- **Videos**: Original filename preserved
-- **Duplicates**: `filename_1.ext`, `filename_2.ext`
-
-### Duplicate File Handling
-Control how existing files are handled:
-
-#### Overwrite Mode (Recommended for updates)
-```json
-{
-  "overwrite_existing_files": true
-}
-```
-- ✅ **Overwrites existing files**
-- ✅ **Saves disk space**
-- ✅ **Keeps only latest version**
-
-#### Unique Names Mode (Default)
-```json
-{
-  "overwrite_existing_files": false
-}
-```
-- ✅ **Creates unique names**
-- ✅ **Preserves old files**
-- ✅ **Prevents data loss**
-
-#### Command Line Usage
-```bash
-# Overwrite existing files
-python3 telegram_media_downloader.py --overwrite
-
-# Create unique names (default)
-python3 telegram_media_downloader.py
-```
-
-## Supported File Types
-
-### Images
-- **JPG/JPEG**: Photos and images
-- **PNG**: Transparent images
-- **GIF**: Animated images
-
-### Videos
-- **MP4**: Most common video format
-- **AVI**: Legacy video format
-- **MOV**: Apple video format
-
-### Documents
-- **PDF**: Portable documents
-- **DOC/DOCX**: Microsoft Word documents
-- **TXT**: Plain text files
-- **SQL**: Database files
-- **CSV**: Spreadsheet data
-- **JSON**: Data files
-- **XML**: Markup files
-
-### Archives
-- **ZIP**: Compressed archives
-- **RAR**: Compressed archives
-
-### Audio
-- **MP3**: Compressed audio
-- **WAV**: Uncompressed audio
+- `account_type`: Switches between `"premium"` and `"free"` settings blocks.
+- `max_concurrent`: The number of files to download at the same time.
+- `chunk_delay_ms`: The delay *after* downloading each small piece of a file. **This is the most important setting for avoiding errors.** Increase it if you see `FloodWait` errors.
 
 ## Common Issues & Solutions
 
-### Rate Limiting (FloodWaitError)
-**Problem**: Telegram blocking requests due to high speed
+### `FloodWaitError` or `GetFileRequest` Errors
+
+**Problem**: Telegram is temporarily blocking you for making too many requests.
 
 **Solutions**:
-1. **Increase delays**:
-   ```json
-   {
-     "delay_between_batches": 20
-   }
-   ```
+1. **Increase `chunk_delay_ms`**: This is the best solution. Open `config.json` and change `200` to a higher value like `500` or `1000`.
+2. **Reduce `max_concurrent`**: Lower the number of parallel downloads.
+3. **Use free account settings**: Run the script with `--account-type "free"`.
 
-2. **Reduce concurrent downloads**:
-   ```json
-   {
-     "max_concurrent": 1
-   }
-   ```
+### `File reference has expired` Errors
 
-3. **Use free account settings**:
-   ```json
-   {
-     "account_type": "free"
-   }
-   ```
+**Problem**: The temporary download link expired.
+**Solution**: This is fixed automatically in version 2.0. If you see this error, you are likely running an older version of the script.
 
-### Connection Issues
-**Problem**: Cannot connect to Telegram servers
+### Files are 0 bytes
 
-**Solutions**:
-1. Check internet connection
-2. Verify API credentials
-3. Try different session name
-4. Use VPN if blocked
-
-### Large Files
-**Problem**: Files too large to download
-
-**Solutions**:
-1. **Ignore size limits**:
-   ```json
-   {
-     "ignore_file_size_limit": true
-   }
-   ```
-
-2. **Increase size limit**:
-   ```json
-   {
-     "max_file_size_mb": 100
-   }
-   ```
-
-3. **Use premium account** for larger limits
-
-### Memory Issues
-**Problem**: High memory usage during downloads
-
-**Solutions**:
-1. **Reduce batch size**:
-   ```json
-   {
-     "batch_size": 5
-   }
-   ```
-
-2. **Enable cleanup**:
-   ```json
-   {
-     "auto_cleanup": true
-   }
-   ```
-
-3. **Monitor memory usage** in logs
-
-### Target Group Issues
-**Problem**: Cannot access target group/channel
-
-**Solutions**:
-1. **Verify group link** is correct
-2. **Check if group is public** or you have access
-3. **Use password** for private channels
-4. **Try different link format**:
-   - `https://t.me/channel_name`
-   - `@channel_name`
-   - `channel_name`
-
-## Performance Tips
-
-### For Free Accounts
-- Use 1 concurrent download
-- Set 15-20 second delays
-- Keep batch size at 5
-- Avoid peak hours
-
-### For Premium Accounts
-- Use 3-5 concurrent downloads
-- Set 8-10 second delays
-- Increase batch size to 8-10
-- Can handle larger files
-
-### General Tips
-- **Start slow**: Begin with conservative settings
-- **Monitor logs**: Check for errors and warnings
-- **Resume safely**: Don't delete state files
-- **Backup important**: Keep copies of config files
-- **Set target group**: Use `target_group` in config.json
-
-## Rate Limiting Guidelines
-
-### Free Account Limits
-| Setting | Recommended Value | Notes |
-|---------|-------------------|-------|
-| Max Concurrent | 1 | Single file at a time |
-| Delay | 15-20 seconds | Longer delays |
-| Batch Size | 5 | Small batches |
-| File Size | 10MB | Conservative limit |
-
-### Premium Account Limits
-| Setting | Recommended Value | Notes |
-|---------|-------------------|-------|
-| Max Concurrent | 3-5 | Multiple files |
-| Delay | 8-10 seconds | Moderate delays |
-| Batch Size | 8-10 | Larger batches |
-| File Size | 100MB+ | Higher limits |
-
-## Troubleshooting Checklist
-
-### Before Starting
-- [ ] Python 3.8+ installed
-- [ ] Dependencies installed
-- [ ] API credentials obtained
-- [ ] Target channel accessible
-- [ ] Sufficient disk space
-- [ ] Target group set in config.json (optional)
-
-### During Download
-- [ ] Monitor log files
-- [ ] Check for errors
-- [ ] Verify file downloads
-- [ ] Monitor memory usage
-- [ ] Check network stability
-
-### After Download
-- [ ] Verify file organization
-- [ ] Check file integrity
-- [ ] Review download statistics
-- [ ] Backup important files
-- [ ] Clean up temporary files
+**Problem**: The download failed, leaving an empty file.
+**Solution**: This is fixed automatically in version 2.0. The script will now clean up these empty files.
 
 ## Need Help?
 
-### Documentation
-- **README.md**: Complete project documentation
-- **CHANGELOG.md**: Version history and updates
-- **CONTRIBUTING.md**: How to contribute
-
-### Support Channels
-- **GitHub Issues**: Report bugs and request features
-- **GitHub Discussions**: Ask questions and share tips
-- **Security Issues**: Report privately for sensitive issues
-
-### Quick Commands
-```bash
-# Check Python version
-python3 --version
-
-# Test installation
-python3 -c "import telethon"
-
-# Run tests
-python3 test_downloader.py
-
-# Check configuration
-python3 -c "import json; print(json.dumps(json.load(open('config.json')), indent=2))"
-
-# Use target from config
-python3 telegram_media_downloader.py
-
-# Override target
-python3 telegram_media_downloader.py --target "https://t.me/channel"
-```
+- **README.md**: For complete project documentation.
+- **CHANGELOG.md**: To see what's new in the latest version.
+- **GitHub Issues**: Report bugs and request new features.
 
 ---
 
 **Happy Downloading! 🚀**
 
-For more information, visit the [main documentation](README.md) or [report issues](https://github.com/1BitCode-Com/telegram-media-downloader/issues). 
+For more information, visit the [main documentation](README.md). 
