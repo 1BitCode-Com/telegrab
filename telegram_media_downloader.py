@@ -16,9 +16,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 import asyncio
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import hashlib
 import base64
+
+try:
+    from tqdm.auto import tqdm
+    TQDM_AVAILABLE = True
+except ImportError:
+    TQDM_AVAILABLE = False
 
 try:
     import psutil
@@ -45,6 +52,21 @@ except ImportError:
     from telethon.tl.types import MessageMediaPhoto, MessageMediaDocument, MessageMediaWebPage
     from telethon.errors import FloodWaitError, SessionPasswordNeededError
 
+# Custom logging handler for tqdm compatibility
+class TqdmLoggingHandler(logging.Handler):
+    def __init__(self, level=logging.NOTSET):
+        super().__init__(level)
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            tqdm.write(msg, file=sys.stderr)
+            self.flush()
+        except (KeyboardInterrupt, SystemExit):
+            raise
+        except Exception:
+            self.handleError(record)
+
 # Configuration
 DEFAULT_CONFIG = {
     "api_id": "",
@@ -53,20 +75,26 @@ DEFAULT_CONFIG = {
     "download_dir": "downloads",
     "state_file": "download_state.json",
     "log_file": "logs/downloader.log",
-    "max_workers": 5,
-    "batch_size": 100,
-    "delay_between_batches": 2,
-    "max_file_size_mb": 100,
-    "allowed_extensions": ["jpg", "jpeg", "png", "gif", "mp4", "avi", "mov", "pdf", "doc", "docx"],
-    "media_types": ["photo", "video", "document"],
     "create_date_folders": True,
     "resume_downloads": True,
-    "concurrent_downloads": True,
-    "max_concurrent": 3,
     "auto_cleanup": False,
     "cleanup_temp_files": True,
     "cleanup_interval_hours": 24,
-    "overwrite_existing_files": False
+    "overwrite_existing_files": False,
+    "rate_limit_delay": 5,
+    "chunk_size_kb": 256,
+    "chunk_delay_ms": 100,
+    "account_type": "free",
+    "free_settings": {
+        "max_concurrent": 1,
+        "delay_between_batches": 15,
+        "batch_size": 5
+    },
+    "premium_settings": {
+        "max_concurrent": 3,
+        "delay_between_batches": 8,
+        "batch_size": 8
+    }
 }
 
 class StateManager:
@@ -75,7 +103,10 @@ class StateManager:
     def __init__(self, state_file: str, encryption_key: str = None):
         self.state_file = state_file
         self.encryption_key = encryption_key
+        self._lock = asyncio.Lock()
         self.state = self.load_state()
+        if "downloaded_files" not in self.state or not isinstance(self.state.get("downloaded_files"), list):
+            self.state["downloaded_files"] = []
     
     def _get_fernet(self):
         """Get Fernet instance for encryption"""
@@ -116,35 +147,38 @@ class StateManager:
             logging.error(f"Error loading state: {e}")
         return {"last_message_id": 0, "downloaded_files": [], "total_downloaded": 0}
     
-    def save_state(self, last_message_id: int, downloaded_files: List[str]):
-        """Save current download state"""
+    def _save_state_to_disk(self):
+        """Saves the current state to the disk."""
         try:
-            state = {
-                "last_message_id": last_message_id,
-                "downloaded_files": downloaded_files,
-                "total_downloaded": len(downloaded_files),
-                "last_updated": datetime.now().isoformat()
-            }
-            
             # Ensure state file directory exists
             state_dir = os.path.dirname(self.state_file)
-            if state_dir:  # Only create directory if path is not empty
+            if state_dir:
                 os.makedirs(state_dir, exist_ok=True)
             
             fernet = self._get_fernet()
             
             if fernet:
-                # Save encrypted state
-                json_data = json.dumps(state, indent=2, ensure_ascii=False)
+                json_data = json.dumps(self.state, indent=2, ensure_ascii=False)
                 encrypted_data = fernet.encrypt(json_data.encode())
                 with open(self.state_file, 'wb') as f:
                     f.write(encrypted_data)
             else:
-                # Save plain state
                 with open(self.state_file, 'w', encoding='utf-8') as f:
-                    json.dump(state, f, indent=2, ensure_ascii=False)
+                    json.dump(self.state, f, indent=2, ensure_ascii=False)
         except Exception as e:
             logging.error(f"Error saving state: {e}")
+
+    async def record_download(self, message_id: int, file_path: str):
+        """Records a successful download and updates the state."""
+        async with self._lock:
+            self.state["downloaded_files"].append(file_path)
+            self.state["total_downloaded"] = len(self.state["downloaded_files"])
+            
+            current_last_id = self.state.get("last_message_id", 0)
+            self.state["last_message_id"] = max(current_last_id, message_id)
+            
+            self.state["last_updated"] = datetime.now().isoformat()
+            self._save_state_to_disk()
 
 class FileOrganizer:
     """Organizes downloaded files into folders"""
@@ -173,7 +207,7 @@ class FileOrganizer:
         
         # Check if we should overwrite existing files
         if self.config.get("overwrite_existing_files", False):
-            logging.info(f"Overwriting existing file: {file_path}")
+            logging.debug(f"Overwriting existing file: {file_path}")
             return file_path
         
         # Generate unique filename
@@ -296,29 +330,57 @@ class TelegramMediaDownloader:
         self.file_organizer = FileOrganizer(config["download_dir"], config["create_date_folders"], config)
         self.progress_tracker = ProgressTracker()
         self.download_queue = asyncio.Queue()
-        
-        # Setup logging
+        self.last_saved_id = 0
         self.setup_logging()
         
-        # Adjust settings for account type BEFORE creating semaphore
+        # Setup logging first
+        # self.setup_logging() # This line is now redundant as setup_logging is called in __init__
+        
+        # Initialize user agents
+        self.user_agents = config.get("user_agents", [
+            "Telegram/8.4.2 (Android 11; SDK 30)",
+            "Telegram/8.5.1 (iOS 15.0; iPhone)",
+            "Telegram/8.6.0 (Windows 10; x64)",
+            "Telegram/8.3.1 (macOS 12.0; x64)",
+            "Telegram/8.7.0 (Linux; x64)"
+        ])
+        self.request_count = 0
+        self._download_lock = asyncio.Lock()
+        self._last_download_start_time = 0
+        self.current_entity = None
+        
+        # self.adjust_settings_for_account_type() # This is now handled by directly reading from config
         self.adjust_settings_for_account_type()
         
-        # Create semaphore with updated max_concurrent
-        self.semaphore = asyncio.Semaphore(self.config.get("max_concurrent", 3))
+        # Initialize semaphore for concurrent downloads
+        self.semaphore = asyncio.Semaphore(self.config.get("max_concurrent", 1))
     
     def setup_logging(self):
-        """Setup logging configuration"""
+        """Setup logging configuration for clean tqdm output."""
         log_file = self.config["log_file"]
         os.makedirs(os.path.dirname(log_file), exist_ok=True)
         
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_file, encoding='utf-8'),
-                logging.StreamHandler(sys.stdout)
-            ]
-        )
+        # Keep file logging as before
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
+        file_handler.setLevel(logging.INFO)
+        file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        file_handler.setFormatter(file_formatter)
+        
+        # Use our custom handler for stream output
+        tqdm_handler = TqdmLoggingHandler()
+        tqdm_handler.setLevel(logging.INFO)
+        tqdm_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+        tqdm_handler.setFormatter(tqdm_formatter)
+        
+        # Get root logger and remove existing handlers
+        log = logging.getLogger()
+        for h in log.handlers[:]:
+            log.removeHandler(h)
+            h.close()
+
+        log.addHandler(file_handler)
+        log.addHandler(tqdm_handler)
+        log.setLevel(logging.INFO)
     
     def validate_download_directory(self):
         """Validate and create download directory"""
@@ -349,19 +411,22 @@ class TelegramMediaDownloader:
         """Adjust settings based on account type (free/premium)"""
         account_type = self.config.get("account_type", "free")
         
+        settings_block = {}
+        log_msg = ""
         if account_type == "premium":
-            premium_settings = self.config.get("premium_settings", {})
-            self.config["max_concurrent"] = premium_settings.get("max_concurrent", 3)
-            self.config["delay_between_batches"] = premium_settings.get("delay_between_batches", 8)
-            self.config["batch_size"] = premium_settings.get("batch_size", 8)
-            logging.info("Using Premium account settings (3 concurrent downloads, 8s delay, human-like behavior)")
+            settings_block = self.config.get("premium_settings", {})
+            log_msg = "Using Premium account settings"
         else:
-            free_settings = self.config.get("free_settings", {})
-            self.config["max_concurrent"] = free_settings.get("max_concurrent", 1)
-            self.config["delay_between_batches"] = free_settings.get("delay_between_batches", 15)
-            self.config["batch_size"] = free_settings.get("batch_size", 5)
-            logging.info("Using Free account settings (1 concurrent download, 15s delay, very conservative)")
-    
+            settings_block = self.config.get("free_settings", {})
+            log_msg = "Using Free account settings"
+
+        # Update the main config with the specific settings
+        self.config.update(settings_block)
+        
+        logging.info(f"{log_msg} ({self.config.get('max_concurrent')} concurrent, "
+                     f"{self.config.get('delay_between_batches')}s delay, "
+                     f"batch size {self.config.get('batch_size')})")
+
     def cleanup_temp_files(self):
         """Clean up temporary files and old downloads"""
         try:
@@ -411,117 +476,190 @@ class TelegramMediaDownloader:
             logging.error(f"Failed to initialize client: {e}")
             raise
     
-    def is_valid_media(self, message) -> bool:
-        """Check if message contains valid media"""
-        if not message.media:
-            return False
-        
-        # Check media type
-        if isinstance(message.media, MessageMediaPhoto):
-            return "photo" in self.config["media_types"]
-        elif isinstance(message.media, MessageMediaDocument):
-            return "document" in self.config["media_types"]
-        elif isinstance(message.media, MessageMediaWebPage):
-            return "webpage" in self.config["media_types"]
-        
-        return False
-    
-    def is_valid_file_size(self, file_size: int) -> bool:
-        """Check if file size is within limits"""
-        # If ignore_file_size_limit is true, skip size check
-        if self.config.get("ignore_file_size_limit", False):
-            return True
-        
-        max_size = self.config["max_file_size_mb"] * 1024 * 1024
-        return file_size <= max_size
-    
-    def is_valid_extension(self, filename: str) -> bool:
-        """Check if file extension is allowed"""
-        if not self.config["allowed_extensions"]:
-            return True
-        
-        ext = filename.split('.')[-1].lower()
-        return ext in self.config["allowed_extensions"]
-    
-    def is_within_date_range(self, message_date: datetime) -> bool:
-        """Check if message date is within specified range"""
-        if not hasattr(self, 'start_date') and not hasattr(self, 'end_date'):
-            return True
-        
-        if hasattr(self, 'start_date') and message_date < self.start_date:
-            return False
-        
-        if hasattr(self, 'end_date') and message_date > self.end_date:
-            return False
-        
-        return True
-    
-    async def download_media_concurrent(self, message, target_entity) -> bool:
-        """Download media from a single message with concurrency control"""
-        async with self.semaphore:
-            return await self.download_media(message, target_entity)
-    
-    async def download_media(self, message, target_entity) -> bool:
-        """Download media from a single message"""
+    def is_valid_media(self, message):
+        """Check if message media type is allowed"""
         try:
+            if not message.media:
+                return False
+            
+            # Check media type
+            allowed_types = self.config.get("media_types", ["photo", "video", "document"])
+            
+            if hasattr(message.media, 'photo') and "photo" in allowed_types:
+                return True
+            elif hasattr(message.media, 'document') and "document" in allowed_types:
+                return True
+            elif hasattr(message.media, 'video') and "video" in allowed_types:
+                return True
+            else:
+                return False
+        except Exception as e:
+            logging.error(f"Error checking media type: {e}")
+            return False
+
+    def get_filename(self, message):
+        """Get filename from message"""
+        try:
+            if hasattr(message.media, 'document'):
+                return message.media.document.attributes[0].file_name
+            elif hasattr(message.media, 'photo'):
+                return f"photo_{message.id}.jpg"
+            else:
+                return None
+        except Exception as e:
+            logging.error(f"Error getting filename: {e}")
+            return None
+    
+    async def get_file_size(self, media):
+        """Get file size from media"""
+        try:
+            if hasattr(media, 'document'):
+                return media.document.size
+            elif hasattr(media, 'photo'):
+                return media.photo.sizes[-1].size
+            else:
+                return None
+        except Exception as e:
+            logging.error(f"Error getting file size: {e}")
+            return None
+    
+    def change_user_agent(self):
+        """Change User Agent randomly"""
+        if self.config.get("user_agents_enabled", False) and self.user_agents:
+            import random
+            new_agent = random.choice(self.user_agents)
+            if hasattr(self.client, 'session') and hasattr(self.client.session, 'headers'):
+                self.client.session.headers.update({'User-Agent': new_agent})
+                logging.info(f"Changed User Agent to: {new_agent}")
+
+    async def worker(self, name: str):
+        """Worker to process downloads from the queue."""
+        # Add import here to fix the error
+        import random
+        while True:
+            try:
+                message_id = await self.download_queue.get()
+                
+                # Fetch fresh message object to get a valid file reference
+                message = await self.client.get_messages(self.current_entity, ids=message_id)
+                if not message:
+                    logging.warning(f"Worker '{name}' could not find message with ID: {message_id}")
+                    self.download_queue.task_done()
+                    continue
+
+                logging.debug(f"Worker '{name}' picked up message ID: {message.id}")
+                await self.download_media(message)
+                self.download_queue.task_done()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logging.error(f"Worker '{name}' encountered an error: {e}")
+                self.download_queue.task_done()
+
+    async def download_media(self, message) -> bool:
+        """Download media from a single message"""
+        # Rate limit the start of downloads to avoid flood waits
+        async with self._download_lock:
+            delay = self.config.get("rate_limit_delay", 5)
+            if self._last_download_start_time > 0:
+                elapsed = time.time() - self._last_download_start_time
+                if elapsed < delay:
+                    sleep_for = delay - elapsed
+                    logging.debug(f"Rate limiting active. Waiting for {sleep_for:.2f} seconds.")
+                    await asyncio.sleep(sleep_for)
+            self._last_download_start_time = time.time()
+
+        filename = "unknown_file"
+        file_path = None
+        try:
+            # Increment request count and change user agent if needed
+            self.request_count += 1
+            if self.config.get("user_agents_enabled", False):
+                change_every = self.config.get("change_user_agent_every", 6)
+                if self.request_count % change_every == 0:
+                    self.change_user_agent()
+            
+            # Check if message has media
+            if not message.media:
+                logging.debug(f"Message {message.id} has no media")
+                return False
+            
+            # Check if media type is allowed
             if not self.is_valid_media(message):
+                logging.debug(f"Message {message.id} media type not allowed")
                 return False
             
             # Get file info
-            if hasattr(message.media, 'document'):
-                file_size = message.media.document.size
-                filename = message.media.document.attributes[0].file_name
-            elif hasattr(message.media, 'photo'):
-                file_size = message.media.photo.sizes[-1].size
-                filename = f"photo_{message.id}.jpg"
-            else:
+            filename = self.get_filename(message)
+            if not filename:
+                logging.debug(f"Message {message.id} has no valid filename")
                 return False
-            
-            # Check file size and extension
-            if not self.is_valid_file_size(file_size):
-                logging.info(f"Skipping {filename} - file too large ({file_size / (1024*1024):.1f}MB)")
-                return False
-            
-            if not self.is_valid_extension(filename):
-                logging.info(f"Skipping {filename} - extension not allowed")
-                return False
-            
-            # Generate file path
+
             file_path = self.file_organizer.get_file_path(message.date, filename)
             file_path = self.file_organizer.generate_unique_filename(file_path)
             
-            # Add small delay before download (natural behavior)
+            logging.debug(f"Preparing to download: '{filename}' (ID: {message.id}, Date: {message.date.strftime('%Y-%m-%d')})")
+            
+            # Add very short delay before download (human-like)
             import random
-            pre_download_delay = random.uniform(0.5, 2.0)  # 0.5-2 seconds random delay
+            pre_download_delay = random.uniform(0.5, 1.5)  # 0.5-1.5 seconds before download
             await asyncio.sleep(pre_download_delay)
+
+            # Manual download with chunking and throttling
+            file_size = await self.get_file_size(message.media)
+            if not file_size:
+                logging.warning(f"Could not determine file size for message {message.id}, skipping download.")
+                return False
             
-            # Download file
-            logging.info(f"Downloading: {filename}")
-            await self.client.download_media(message.media, str(file_path))
+            chunk_size_bytes = self.config.get("chunk_size_kb", 256) * 1024
+            chunk_delay_sec = self.config.get("chunk_delay_ms", 100) / 1000.0
+
+            pbar = None
+            if TQDM_AVAILABLE:
+                pbar = tqdm(
+                    total=file_size,
+                    desc=filename,
+                    unit='B',
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    leave=False,
+                    ncols=80,
+                    bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}]'
+                )
             
-            # Add small delay after download (natural behavior)
-            post_download_delay = random.uniform(0.5, 1.5)  # 0.5-1.5 seconds random delay
-            await asyncio.sleep(post_download_delay)
-            
-            # Update progress
+            try:
+                with open(file_path, "wb") as f:
+                    async for chunk in self.client.iter_download(message.media, request_size=chunk_size_bytes):
+                        f.write(chunk)
+                        if pbar:
+                            pbar.update(len(chunk))
+                        
+                        # Throttle after each chunk
+                        if chunk_delay_sec > 0:
+                            await asyncio.sleep(chunk_delay_sec)
+            finally:
+                if pbar:
+                    pbar.close()
+
+            logging.info(f"Successfully downloaded: '{filename}' (ID: {message.id}, Date: {message.date.strftime('%Y-%m-%d')})")
             self.progress_tracker.update(True, file_size, filename, str(file_path))
-            logging.info(f"Successfully downloaded: {filename}")
-            
+            await self.state_manager.record_download(message.id, str(file_path))
             return True
-            
+
         except Exception as e:
-            logging.error(f"Error downloading media from message {message.id}: {e}")
-            self.progress_tracker.update(False)
-            
-            # Add longer delay on error (human-like)
-            import random
-            error_delay = random.uniform(3, 8)
-            await asyncio.sleep(error_delay)
-            
+            logging.error(f"Error downloading {filename}: {e}")
+            self.progress_tracker.update(False, 0, filename)
+            # Cleanup failed (0-byte) files
+            if file_path and file_path.exists() and file_path.stat().st_size == 0:
+                try:
+                    file_path.unlink()
+                    logging.info(f"Cleaned up 0-byte file: {file_path}")
+                except Exception as cleanup_e:
+                    logging.warning(f"Failed to cleanup 0-byte file {file_path}: {cleanup_e}")
             return False
     
     async def download_from_entity(self, target: str):
-        """Download all media from target entity"""
+        """Producer that adds messages to the download queue."""
         try:
             # Validate download directory first
             if not self.validate_download_directory():
@@ -537,6 +675,7 @@ class TelegramMediaDownloader:
                 else:
                     raise e
             
+            self.current_entity = entity
             logging.info(f"Starting download from: {entity.title}")
             logging.info(f"Files will be saved to: {self.config['download_dir']}")
             
@@ -557,134 +696,95 @@ class TelegramMediaDownloader:
             self.progress_tracker.start()
             self.progress_tracker.set_concurrent_info(0, self.config.get("max_concurrent", 3))
             
-            # Download messages in batches
-            batch_count = 0
-            downloaded_files = []
+            # Create and start workers
+            workers = [
+                asyncio.create_task(self.worker(f"Worker-{i+1}")) 
+                for i in range(self.config.get("max_concurrent", 1))
+            ]
             
+            logging.info(f"Started {len(workers)} download workers.")
+
             # Collect messages for batch processing
-            messages_to_download = []
             
-            async for message in self.client.iter_messages(
-                entity, 
-                reverse=True, 
-                offset_id=last_id
-            ):
-                batch_count += 1
+            logging.info("Starting to iterate through messages...")
+            message_count = 0
+            
+            # Use tqdm for overall progress
+            total_messages = await self.client.get_messages(entity, limit=0)
+            overall_pbar = None
+            if TQDM_AVAILABLE and total_messages:
+                overall_pbar = tqdm(total=total_messages.total, desc="Processing messages", unit="msg", dynamic_ncols=True)
+
+            last_processed_id = last_id
+            
+            # Message iteration loop
+            async for message in self.client.iter_messages(entity, reverse=True, offset_id=last_id):
+                if overall_pbar:
+                    overall_pbar.update(1)
                 
-                # Check date filter
-                if not self.is_within_date_range(message.date):
-                    continue
+                message_count += 1
+                last_processed_id = message.id
                 
+                # Add a delay between batches to avoid flood waits
+                if message_count > 0 and message_count % self.config["batch_size"] == 0:
+                    delay = self.config["delay_between_batches"]
+                    logging.debug(f"Batch limit of {self.config['batch_size']} reached, sleeping for {delay} seconds...")
+                    await asyncio.sleep(delay)
+
+                # Periodically save the last processed message ID
+                if message_count % 250 == 0: 
+                    if overall_pbar and self.state_manager.state.get("last_message_id", 0) > 0:
+                        overall_pbar.set_postfix_str(f"Last DL ID: {self.state_manager.state['last_message_id']}")
+
                 if self.is_valid_media(message):
-                    messages_to_download.append(message)
-                
-                # Process batch when full or at end
-                if len(messages_to_download) >= self.config["batch_size"] or batch_count % self.config["batch_size"] == 0:
-                    if messages_to_download:
-                        # Download messages concurrently (5 files at once)
-                        tasks = []
-                        for msg in messages_to_download:
-                            task = self.download_media_concurrent(msg, entity)
-                            tasks.append(task)
-                        
-                        # Wait for all downloads in batch to complete
-                        results = await asyncio.gather(*tasks, return_exceptions=True)
-                        
-                        # Process results
-                        for i, result in enumerate(results):
-                            if isinstance(result, Exception):
-                                logging.error(f"Download failed: {result}")
-                            elif result:
-                                downloaded_files.append(messages_to_download[i].id)
-                        
-                        # Add random delay after batch completion
-                        import random
-                        batch_delay = random.uniform(2, 8)  # 2-8 seconds random delay
-                        logging.info(f"Batch completed. Taking random break for {batch_delay:.1f} seconds")
-                        await asyncio.sleep(batch_delay)
-                        
-                        # Update concurrent info
-                        self.progress_tracker.set_concurrent_info(len(tasks), self.config.get("max_concurrent", 5))
-                        
-                        # Clear batch
-                        messages_to_download = []
-                    
-                    # Save state periodically
-                    if batch_count % self.config["batch_size"] == 0:
-                        self.state_manager.save_state(message.id, downloaded_files)
-                        logging.info(f"Batch {batch_count // self.config['batch_size']} completed")
-                        
-                        # Add delay between batches (natural behavior)
-                        base_delay = self.config["delay_between_batches"]
-                        import random
-                        random_additional = random.uniform(1, 3)  # 1-3 seconds extra
-                        total_delay = base_delay + random_additional
-                        logging.info(f"Taking a break for {total_delay:.1f} seconds (natural behavior)")
-                        await asyncio.sleep(total_delay)
-                
-                # Update progress
-                self.progress_tracker.total_files += 1
-                
-                # Check memory usage
-                if not self.progress_tracker.check_memory_limit(1000):  # 1GB limit
-                    logging.warning("Memory usage high, pausing for cleanup...")
-                    await asyncio.sleep(5)  # Pause for 5 seconds
-                
-                # Print progress every 50 files
-                if batch_count % 50 == 0:
-                    stats = self.progress_tracker.get_stats()
-                    logging.info(f"Progress: {stats['downloaded']}/{stats['total_files']} files downloaded")
-                    logging.info(f"Memory usage: {stats['memory_usage_mb']:.1f}MB")
+                    await self.download_queue.put(message.id)
             
-            # Process remaining messages
-            if messages_to_download:
-                tasks = []
-                for msg in messages_to_download:
-                    if self.config.get("concurrent_downloads", True):
-                        task = self.download_media_concurrent(msg, entity)
-                    else:
-                        task = self.download_media(msg, entity)
-                    tasks.append(task)
-                
-                results = await asyncio.gather(*tasks, return_exceptions=True)
-                
-                for i, result in enumerate(results):
-                    if isinstance(result, Exception):
-                        logging.error(f"Download failed: {result}")
-                    elif result:
-                        downloaded_files.append(messages_to_download[i].id)
+            if overall_pbar:
+                overall_pbar.set_postfix_str("Finished iterating messages.")
+
+            logging.info(f"Finished iterating messages. Last scanned ID: {last_processed_id}.")
             
-            # Final state save
-            self.state_manager.save_state(0, downloaded_files)
+            await self.download_queue.join()
+
+            for w in workers:
+                w.cancel()
             
-            # Print final statistics
-            final_stats = self.progress_tracker.get_stats()
-            logging.info("Download completed!")
-            logging.info(f"Final statistics: {final_stats}")
+            await asyncio.gather(*workers, return_exceptions=True)
+
+            if overall_pbar:
+                overall_pbar.close()
+
+            logging.info("All download tasks completed.")
             
-            # Export CSV if requested
+            logging.info(f"Download completed! Processed {message_count} messages total")
+
             if self.config.get("csv_export", False):
                 self.progress_tracker.export_to_csv()
-            
-            # Perform cleanup if enabled
-            if self.config.get("auto_cleanup", False):
-                self.cleanup_temp_files()
-            
+
+            stats = self.progress_tracker.get_stats()
+            logging.info(f"Final statistics: {stats}")
         except Exception as e:
             logging.error(f"Error during download: {e}")
             raise
 
 def load_config(config_file: str = "config.json") -> Dict[str, Any]:
-    """Load configuration from file"""
+    """Load configuration from file, merging with defaults."""
+    config = DEFAULT_CONFIG.copy()
     if os.path.exists(config_file):
-        with open(config_file, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-    else:
-        config = DEFAULT_CONFIG.copy()
-        # Save default config
+        try:
+            with open(config_file, 'r', encoding='utf-8') as f:
+                user_config = json.load(f)
+            config.update(user_config)
+        except (json.JSONDecodeError, TypeError) as e:
+            logging.warning(f"Could not decode config file, using defaults: {e}")
+    
+    # Save back the merged config to ensure all keys are present
+    try:
         with open(config_file, 'w', encoding='utf-8') as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
-    
+    except Exception as e:
+        logging.error(f"Could not write to config file: {e}")
+        
     return config
 
 def save_api_credentials(api_id: str, api_hash: str, config_file: str = "config.json"):
@@ -717,14 +817,9 @@ async def main():
     parser.add_argument("--save-credentials", action="store_true", help="Save API credentials to config file")
     parser.add_argument("--setup", action="store_true", help="Interactive setup mode")
     parser.add_argument("--max-concurrent", type=int, help="Maximum concurrent downloads")
-    parser.add_argument("--no-concurrent", action="store_true", help="Disable concurrent downloads")
-    parser.add_argument("--start-date", help="Start date for filtering (YYYY-MM-DD)")
-    parser.add_argument("--end-date", help="End date for filtering (YYYY-MM-DD)")
     parser.add_argument("--password", help="Password for protected channels")
     parser.add_argument("--csv-export", action="store_true", help="Export download statistics to CSV")
-    parser.add_argument("--cleanup", action="store_true", help="Enable automatic cleanup of downloaded files")
     parser.add_argument("--account-type", choices=["free", "premium"], help="Telegram account type (free/premium)")
-    parser.add_argument("--ignore-size-limit", action="store_true", help="Ignore file size limits")
     parser.add_argument("--overwrite", action="store_true", help="Overwrite existing files instead of creating unique names")
     
     args = parser.parse_args()
@@ -776,7 +871,6 @@ async def main():
         config["api_hash"] = api_hash
         config["download_dir"] = download_dir
         config["max_concurrent"] = max_concurrent
-        config["concurrent_downloads"] = not args.no_concurrent
         config["csv_export"] = args.csv_export
         config["auto_cleanup"] = cleanup_enabled
         config["cleanup_interval_hours"] = cleanup_interval
@@ -813,15 +907,8 @@ async def main():
         config["download_dir"] = args.download_dir
     if args.max_concurrent:
         config["max_concurrent"] = args.max_concurrent
-    if args.no_concurrent:
-        config["concurrent_downloads"] = False
     if args.csv_export:
         config["csv_export"] = True
-    if args.cleanup:
-        config["auto_cleanup"] = True
-        config["cleanup_interval_hours"] = args.cleanup_interval_hours
-    if args.ignore_size_limit:
-        config["ignore_file_size_limit"] = True
     if args.overwrite:
         config["overwrite_existing_files"] = True
     
@@ -869,11 +956,17 @@ async def main():
     if args.password:
         downloader.password = args.password
     
-    # Adjust settings based on account type
+    # Adjust settings based on account type, allowing CLI to override
     if args.account_type:
-        downloader.config["account_type"] = args.account_type
+        config["account_type"] = args.account_type
+    
     downloader.adjust_settings_for_account_type()
     
+    # Re-apply CLI args to override account type settings
+    if args.max_concurrent:
+        config["max_concurrent"] = args.max_concurrent
+        downloader.semaphore = asyncio.Semaphore(config["max_concurrent"]) # Re-initialize semaphore
+
     try:
         await downloader.initialize_client()
         await downloader.download_from_entity(target)
