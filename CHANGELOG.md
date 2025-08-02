@@ -11,6 +11,7 @@ All notable changes to this project will be documented in this file.
 - **Automatic Cleanup of 0-Byte Files**: Automatically detects and deletes empty files created from failed downloads, keeping the download directory clean.
 
 ### Changed
+- **Project Renamed to TeleGrab**: The project has been rebranded to better reflect its power and purpose.
 - **Refactored Configuration**: Simplified and reorganized `config.json` to be more intuitive, with `free_settings` and `premium_settings` blocks for clear, hierarchical configuration.
 - **Improved Download Logic**: The core download logic is now more resilient and efficient, focusing on stability for parallel operations.
 
