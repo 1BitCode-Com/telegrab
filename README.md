@@ -10,7 +10,7 @@
 
 [![Get Started](https://img.shields.io/badge/Get%20Started-Quick%20Start-blue?style=for-the-badge&logo=github)](QUICK_START.md)
 [![Documentation](https://img.shields.io/badge/Documentation-README-blue?style=for-the-badge&logo=markdown)](README.md)
-[![Issues](https://img.shields.io/badge/Issues-Report%20Bug-red?style=for-the-badge&logo=github)](https://github.com/1BitCode-Com/telegram-media-downloader/issues)
+[![Issues](https://img.shields.io/badge/Issues-Report%20Bug-red?style=for-the-badge&logo=github)](https://github.com/1BitCode-Com/telegrab/issues)
 
 </div>
 
@@ -49,8 +49,8 @@ TeleGrab: The Ultimate Telegram Channel & Group Archiver. Designed to grab every
 
 1. **Clone or download the project:**
 ```bash
-git clone https://github.com/1BitCode-Com/telegram-media-downloader.git
-cd telegram-media-downloader
+git clone https://github.com/1BitCode-Com/telegrab.git
+cd telegrab
 ```
 
 2. **Install dependencies:**
@@ -73,7 +73,7 @@ Edit `config.json` to customize settings. Here is a full example:
 {
   "api_id": "YOUR_API_ID",
   "api_hash": "YOUR_API_HASH",
-  "session_name": "telegram_downloader",
+  "session_name": "telegrab_session",
   "target_group": "https://t.me/example_channel",
   "download_dir": "downloads",
   "account_type": "premium",
@@ -111,22 +111,22 @@ Edit `config.json` to customize settings. Here is a full example:
 
 ```bash
 # Use target and settings from config.json
-python3 telegram_media_downloader.py
+python3 telegrab.py
 
 # Override target from command line
-python3 telegram_media_downloader.py --target "https://t.me/channel_name"
+python3 telegrab.py --target "https://t.me/channel_name"
 
 # Override account type
-python3 telegram_media_downloader.py --account-type "free"
+python3 telegrab.py --account-type "free"
 
 # Override concurrent downloads
-python3 telegram_media_downloader.py --max-concurrent 1
+python3 telegrab.py --max-concurrent 1
 
 # Overwrite existing files
-python3 telegram_media_downloader.py --overwrite
+python3 telegrab.py --overwrite
 
 # Password protected channel
-python3 telegram_media_downloader.py --password "channel_password" --target "https://t.me/private_channel"
+python3 telegrab.py --password "channel_password" --target "https://t.me/private_channel"
 ```
 
 ### Interactive Mode
@@ -162,8 +162,8 @@ python3 run.py
 
 ### Project Structure
 ```
-telegram-media-downloader/
-├── telegram_media_downloader.py  # Main script
+telegrab/
+├── telegrab.py                   # Main script
 ├── run.py                        # Interactive runner
 ├── config.json                   # Configuration
 ├── requirements.txt              # Dependencies
