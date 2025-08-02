@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for Telegram Media Downloader
+Test script for TeleGrab
 This script helps verify the configuration and basic functionality
 """
 
@@ -9,11 +9,11 @@ import json
 import os
 import sys
 import subprocess
-from telegram_media_downloader import TelegramMediaDownloader, load_config
+from telegrab import TelegramMediaDownloader, load_config
 
 async def test_connection():
     """Test Telegram connection and configuration"""
-    print("Testing Telegram Media Downloader Configuration...")
+    print("Testing TeleGrab Configuration...")
     print("=" * 50)
     
     # Load configuration
@@ -120,7 +120,7 @@ def run_test_command(command):
 
 async def main():
     """Main test function"""
-    print("Telegram Media Downloader - Test Suite")
+    print("TeleGrab - Test Suite")
     print("=" * 50)
     
     tests = [
