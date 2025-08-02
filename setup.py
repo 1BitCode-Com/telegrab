@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Setup script for Telegram Media Downloader
-Updated 02/08/2025
+Updated 31/07/2025
 """
 
 from setuptools import setup, find_packages
@@ -18,13 +18,13 @@ def read_requirements():
         return [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="telegram-media-downloader",
+    name="telegrab",
     version="2.0.0",
     author="1BitCode-Com",
-    description="The most advanced and stable Telegram media downloader. Features robust parallel downloading, intelligent error handling (FloodWait, Expired Links), and a configurable chunk-based mechanism to bypass API limits. Optimized for massive archives.",
+    description="TeleGrab: The Ultimate Telegram Channel & Group Archiver. Designed to grab every photo, video, and document, bypassing API limits and handling expired links with ease.",
     long_description=read_readme(),
     long_description_content_type="text/markdown",
-    url="https://github.com/1BitCode-Com/telegram-media-downloader",
+    url="https://github.com/1BitCode-Com/telegrab",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 4 - Beta",
@@ -46,15 +46,15 @@ setup(
     install_requires=read_requirements(),
     entry_points={
         "console_scripts": [
-            "telegram-downloader=telegram_media_downloader:main",
+            "telegrab=telegram_media_downloader:main",
         ],
     },
     include_package_data=True,
     zip_safe=False,
-    keywords="telegram, downloader, media, bot, api",
+    keywords="telegram, downloader, media, bot, api, grabber, archiver",
     project_urls={
-        "Bug Reports": "https://github.com/1BitCode-Com/telegram-media-downloader/issues",
-        "Source": "https://github.com/1BitCode-Com/telegram-media-downloader",
-        "Documentation": "https://github.com/1BitCode-Com/telegram-media-downloader#readme",
+        "Bug Reports": "https://github.com/1BitCode-Com/telegrab/issues",
+        "Source": "https://github.com/1BitCode-Com/telegrab",
+        "Documentation": "https://github.com/1BitCode-Com/telegrab#readme",
     },
 ) 
