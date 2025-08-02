@@ -1,6 +1,6 @@
-# Quick Start Guide
+# Quick Start Guide for TeleGrab
 
-A comprehensive guide to get you started with Telegram Media Downloader v2.0 quickly and efficiently.
+A comprehensive guide to get you started with TeleGrab v2.0 quickly and efficiently.
 
 ## Prerequisites
 
