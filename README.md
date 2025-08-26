@@ -66,9 +66,6 @@ pip install -r requirements.txt
 
 3. **Run the interactive setup:**
 ```bash
-python3 -m venv .venv
-```
-```bash
 source .venv/bin/activate
 ```
 ```bash
